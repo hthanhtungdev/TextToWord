@@ -8,7 +8,6 @@ contentArea.addEventListener('input', () => {
 
 // Create Word document
 async function createWordDocument() {
-    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = docx;
     const text = contentArea.value;
     const lines = text.split('\n');
     const children = [];
@@ -16,15 +15,15 @@ async function createWordDocument() {
     for (const line of lines) {
         // Empty line
         if (line.trim() === '') {
-            children.push(new Paragraph({ children: [] }));
+            children.push(new docx.Paragraph({ children: [] }));
             continue;
         }
 
         // Heading
         if (line.startsWith('# ')) {
-            children.push(new Paragraph({
-                children: [new TextRun({ text: line.substring(2), bold: true, size: 32, font: 'Times New Roman' })],
-                heading: HeadingLevel.HEADING_1,
+            children.push(new docx.Paragraph({
+                children: [new docx.TextRun({ text: line.substring(2), bold: true, size: 32, font: 'Times New Roman' })],
+                heading: docx.HeadingLevel.HEADING_1,
                 spacing: { before: 240, after: 120 }
             }));
             continue;
@@ -32,8 +31,8 @@ async function createWordDocument() {
 
         // Bullet
         if (/^\s*[\*\-]\s+/.test(line)) {
-            children.push(new Paragraph({
-                children: [new TextRun({ text: line.replace(/^\s*[\*\-]\s+/, ''), size: 24, font: 'Times New Roman' })],
+            children.push(new docx.Paragraph({
+                children: [new docx.TextRun({ text: line.replace(/^\s*[\*\-]\s+/, ''), size: 24, font: 'Times New Roman' })],
                 bullet: { level: 0 },
                 spacing: { line: 360 }
             }));
@@ -41,17 +40,20 @@ async function createWordDocument() {
         }
 
         // Normal paragraph
-        children.push(new Paragraph({
-            children: [new TextRun({ text: line, size: 24, font: 'Times New Roman' })],
+        children.push(new docx.Paragraph({
+            children: [new docx.TextRun({ text: line, size: 24, font: 'Times New Roman' })],
             spacing: { line: 360, before: 60, after: 60 }
         }));
     }
 
-    const doc = new Document({
-        sections: [{ children }]
+    const doc = new docx.Document({
+        sections: [{
+            properties: {},
+            children: children
+        }]
     });
 
-    const blob = await Packer.toBlob(doc);
+    const blob = await docx.Packer.toBlob(doc);
     saveAs(blob, 'document.docx');
 }
 
@@ -59,14 +61,13 @@ async function createWordDocument() {
 downloadBtn.addEventListener('click', async () => {
     try {
         downloadBtn.disabled = true;
-        downloadBtn.querySelector('span') 
-            ? downloadBtn.querySelector('span').textContent = 'Đang tạo...'
-            : downloadBtn.textContent = 'Đang tạo...';
+        const btnText = downloadBtn.querySelector('.btn-text');
+        if (btnText) btnText.textContent = 'Đang tạo...';
 
         await createWordDocument();
     } catch (err) {
-        console.error(err);
-        alert('Có lỗi xảy ra, vui lòng thử lại.');
+        console.error('Lỗi tạo file:', err);
+        alert('Có lỗi xảy ra: ' + err.message);
     } finally {
         downloadBtn.innerHTML = `
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -74,7 +75,7 @@ downloadBtn.addEventListener('click', async () => {
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
-            Tải file .docx`;
+            <span class="btn-text">Tải file .docx</span>`;
         downloadBtn.disabled = contentArea.value.trim().length === 0;
     }
 });
