@@ -212,20 +212,21 @@ function buildWordHtml(text) {
         }
 
         // Heading 1
-        if (line.indexOf('# ') === 0 && line.indexOf('## ') !== 0) {
-            html += '<h1 style="font-family:Times New Roman,serif;font-size:16pt;font-weight:bold;text-align:center;">' + escapeHtml(line.substring(2)) + '</h1>';
+        if (/^#\s+/.test(line) && !/^##/.test(line)) {
+            html += '<h1 style="font-family:Times New Roman,serif;font-size:16pt;font-weight:bold;text-align:center;">' + escapeHtml(line.replace(/^#\s+/, '')) + '</h1>';
             continue;
         }
 
-        // Heading 2
-        if (line.indexOf('## ') === 0 && line.indexOf('### ') !== 0) {
-            html += '<h2 style="font-family:Times New Roman,serif;font-size:14pt;font-weight:bold;">' + escapeHtml(line.substring(3)) + '</h2>';
+        // Heading 2 (bao gồm cả "1. ## Heading" hoặc "## Heading")
+        if (/^((\d+[\.\)]?\s*)?##\s+|##\s+)/.test(line)) {
+            var h2Text = line.replace(/^(\d+[\.\)]?\s*)?##\s+/, '').trim();
+            html += '<h2 style="font-family:Times New Roman,serif;font-size:14pt;font-weight:bold;">' + escapeHtml(h2Text) + '</h2>';
             continue;
         }
 
-        // Heading 3
-        if (line.indexOf('### ') === 0) {
-            html += '<h3 style="font-family:Times New Roman,serif;font-size:13pt;font-weight:bold;">' + escapeHtml(line.substring(4)) + '</h3>';
+        // Heading 3 (bao gồm "### Heading")
+        if (/^###\s+/.test(line)) {
+            html += '<h3 style="font-family:Times New Roman,serif;font-size:13pt;font-weight:bold;">' + escapeHtml(line.replace(/^###\s+/, '')) + '</h3>';
             continue;
         }
 
