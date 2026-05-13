@@ -10,9 +10,6 @@ const formatBtn = document.getElementById('format-btn');
 const actionHint = document.getElementById('action-hint');
 const toast = document.getElementById('toast');
 const toastText = document.getElementById('toast-text');
-const aiPopup = document.getElementById('ai-popup');
-const aiYes = document.getElementById('ai-yes');
-const aiNo = document.getElementById('ai-no');
 
 // ===== GEMINI API =====
 const GEMINI_API_KEY = 'AIzaSyDtBFE0SpS871QL7FCfwLBNjXjkLn4g3QQ';
@@ -78,26 +75,7 @@ function showToast(message) {
     setTimeout(function() { toast.className = 'toast hidden'; }, 3000);
 }
 
-// ===== AUTO AI KHI PASTE =====
-var justPasted = false;
-contentArea.addEventListener('paste', function() {
-    justPasted = true;
-    setTimeout(function() {
-        if (justPasted && contentArea.value.trim().length > 50) {
-            aiPopup.classList.remove('hidden');
-        }
-        justPasted = false;
-    }, 300);
-});
-
-aiYes.addEventListener('click', function() {
-    aiPopup.classList.add('hidden');
-    formatBtn.click();
-});
-
-aiNo.addEventListener('click', function() {
-    aiPopup.classList.add('hidden');
-});
+// ===== AUTO AI KHI PASTE (đã tắt) =====
 
 // ===== GỌI GEMINI API =====
 async function callGemini(prompt) {
@@ -112,9 +90,10 @@ async function callGemini(prompt) {
                 })
             });
 
-            if (response.status === 429) {
-                console.log('Model ' + GEMINI_MODELS[i] + ' rate limit, thử model khác...');
-                await new Promise(function(r) { setTimeout(r, 1000); });
+            // Nếu bị rate limit hoặc lỗi server, thử model tiếp
+            if (response.status === 429 || response.status === 400 || response.status === 404) {
+                console.log('Model ' + GEMINI_MODELS[i] + ' lỗi ' + response.status + ', thử model khác...');
+                await new Promise(function(r) { setTimeout(r, 500); });
                 continue;
             }
 
@@ -140,14 +119,41 @@ formatBtn.addEventListener('click', async function() {
     formatBtn.querySelector('.btn-text').textContent = 'Đang sắp xếp...';
     formatBtn.disabled = true;
 
+    var stylePrompt = '';
+    var selectedStyle = styleSelect.value;
+
+    if (selectedStyle === 'report') {
+        stylePrompt = '\n\nĐịnh dạng theo kiểu BÁO CÁO / TIỂU LUẬN:\n' +
+            '- Thêm tiêu đề chính ở đầu với #\n' +
+            '- Chia thành các phần đánh số La Mã hoặc số (## 1. Tên phần)\n' +
+            '- Mỗi phần có đoạn văn giải thích đầy đủ\n' +
+            '- Cuối có phần ## Kết luận tóm tắt lại\n' +
+            '- Dùng đoạn văn dài, không dùng quá nhiều bullet';
+    } else if (selectedStyle === 'letter') {
+        stylePrompt = '\n\nĐịnh dạng theo kiểu THƯ / ĐƠN TỪ:\n' +
+            '- Dòng đầu: # CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM (nếu là đơn từ)\n' +
+            '- Hoặc # Tiêu đề thư\n' +
+            '- Có phần Kính gửi: ...\n' +
+            '- Nội dung thư/đơn viết thành đoạn văn mạch lạc\n' +
+            '- Cuối có phần ký tên, ngày tháng';
+    } else if (selectedStyle === 'modern') {
+        stylePrompt = '\n\nĐịnh dạng theo kiểu HIỆN ĐẠI / TRÌNH BÀY:\n' +
+            '- Tiêu đề ngắn gọn với #\n' +
+            '- Dùng nhiều ## tiêu đề phụ nhỏ\n' +
+            '- Ưu tiên bullet point (* ) ngắn gọn, dễ đọc\n' +
+            '- Mỗi ý 1 dòng, không viết đoạn dài\n' +
+            '- Phong cách slide/presentation';
+    }
+
     var prompt = 'Bạn là trợ lý định dạng văn bản. Hãy sắp xếp lại đoạn văn bản sau thành dạng có cấu trúc rõ ràng để xuất ra file Word đẹp. Quy tắc:\n' +
         '- Nhận diện tiêu đề chính, đặt trên 1 dòng riêng với # ở đầu\n' +
         '- Nhận diện tiêu đề phụ, đặt trên 1 dòng riêng với ## ở đầu\n' +
         '- Nhận diện các mục liệt kê, đặt mỗi mục 1 dòng với * ở đầu\n' +
         '- Các đoạn văn bản thường thì tách riêng bằng dòng trống\n' +
         '- Giữ nguyên nội dung, KHÔNG thêm bớt ý, KHÔNG dịch, KHÔNG giải thích\n' +
-        '- Chỉ trả về văn bản đã sắp xếp, không thêm gì khác\n\n' +
-        'Văn bản cần sắp xếp:\n' + text;
+        '- Chỉ trả về văn bản đã sắp xếp, không thêm gì khác' +
+        stylePrompt +
+        '\n\nVăn bản cần sắp xếp:\n' + text;
 
     var result = await callGemini(prompt);
 
