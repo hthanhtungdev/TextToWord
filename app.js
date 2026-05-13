@@ -39,7 +39,7 @@ async function callAI(text) {
         '- Bullet list dùng <ul><li>, nếu item có phần đầu quan trọng thì in đậm phần đó\n' +
         '- KHÔNG thêm chữ "Label:" vào bullet, giữ nguyên nội dung gốc\n' +
         '- Sub-list lồng nhau: <ul><li> bên trong <li> cha, dùng circle style\n' +
-        '- Số liệu so sánh dùng <table> có header nền xám, border, padding 10px\n' +
+        '- Số liệu so sánh dùng <table> với style: border-collapse:collapse; width:100%; margin:16px 0. Header <th> có background:#2c3e50; color:white; padding:12px; border:1px solid #2c3e50; text-align:center. Dữ liệu <td> có padding:10px; border:1px solid #ddd; text-align:center. Hàng chẵn <tr>:nth-child(even) background:#f9f9f9\n' +
         '- Font: Times New Roman 13pt, line-height 1.8\n' +
         '- Body margin: 2.5cm\n\n' +
         'YÊU CẦU:\n' +
