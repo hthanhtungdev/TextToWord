@@ -1,4 +1,5 @@
 const contentArea = document.getElementById('doc-content');
+const fileNameInput = document.getElementById('file-name');
 const downloadBtn = document.getElementById('download-btn');
 const copyBtn = document.getElementById('copy-btn');
 const actionHint = document.getElementById('action-hint');
@@ -62,6 +63,15 @@ function buildWordHtml(text) {
     return html;
 }
 
+// Get file name
+function getFileName() {
+    var name = fileNameInput.value.trim();
+    if (!name) name = 'document';
+    // Remove invalid characters
+    name = name.replace(/[\\/:*?"<>|]/g, '');
+    return name;
+}
+
 // ===== COPY FILE .DOC VÀO CLIPBOARD (dạng file) =====
 async function copyAsDocFile() {
     var text = contentArea.value.trim();
@@ -73,7 +83,7 @@ async function copyAsDocFile() {
     try {
         // Tạo blob file .doc
         var fileBlob = new Blob(['\ufeff' + fullHtml], { type: 'application/msword' });
-        var file = new File([fileBlob], 'document.doc', { type: 'application/msword' });
+        var file = new File([fileBlob], getFileName() + '.doc', { type: 'application/msword' });
 
         // Thử share file (hoạt động tốt trên mobile)
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -87,7 +97,7 @@ async function copyAsDocFile() {
             var url = URL.createObjectURL(fileBlob);
             var a = document.createElement('a');
             a.href = url;
-            a.download = 'document.doc';
+            a.download = getFileName() + '.doc';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -101,7 +111,7 @@ async function copyAsDocFile() {
             var url2 = URL.createObjectURL(fileBlob2);
             var a2 = document.createElement('a');
             a2.href = url2;
-            a2.download = 'document.doc';
+            a2.download = getFileName() + '.doc';
             document.body.appendChild(a2);
             a2.click();
             document.body.removeChild(a2);
@@ -122,7 +132,7 @@ function downloadDocFile() {
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = 'document.doc';
+    a.download = getFileName() + '.doc';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
