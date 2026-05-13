@@ -12,15 +12,17 @@ const toast = document.getElementById('toast');
 const toastText = document.getElementById('toast-text');
 
 // ===== GEMINI API =====
-const GEMINI_API_KEY = 'AIzaSyDtBFE0SpS871QL7FCfwLBNjXjkLn4g3QQ';
-const GEMINI_MODELS = [
-    'gemini-flash-latest',
-    'gemini-2.0-flash-lite',
-    'gemini-2.0-flash'
+const GEMINI_API_KEYS = [
+    'AIzaSyDtBFE0SpS871QL7FCfwLBNjXjkLn4g3QQ',
+    'AIzaSyAuRhdMA-icS7yJtdY0x4dCLIsyW0K5j6w',
+    'AIzaSyBsbHLHVajXTjMH76wPC4Y70IBtYUnbXGw',
+    'AIzaSyCAKkxbmUe0th5Az2rjYcbHG3WYktgNn1A'
 ];
+var currentKeyIndex = 0;
 
-function getGeminiUrl(model) {
-    return 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + GEMINI_API_KEY;
+function getGeminiUrl() {
+    var key = GEMINI_API_KEYS[currentKeyIndex];
+    return 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' + key;
 }
 
 // ===== WORD STYLES =====
@@ -79,8 +81,9 @@ function showToast(message) {
 
 // ===== GỌI GEMINI API =====
 async function callGemini(prompt) {
-    for (var i = 0; i < GEMINI_MODELS.length; i++) {
-        var url = getGeminiUrl(GEMINI_MODELS[i]);
+    // Thử tất cả keys, xoay vòng nếu bị rate limit
+    for (var attempt = 0; attempt < GEMINI_API_KEYS.length; attempt++) {
+        var url = getGeminiUrl();
         try {
             var response = await fetch(url, {
                 method: 'POST',
@@ -90,10 +93,11 @@ async function callGemini(prompt) {
                 })
             });
 
-            // Nếu bị rate limit hoặc lỗi server, thử model tiếp
-            if (response.status === 429 || response.status === 400 || response.status === 404) {
-                console.log('Model ' + GEMINI_MODELS[i] + ' lỗi ' + response.status + ', thử model khác...');
-                await new Promise(function(r) { setTimeout(r, 500); });
+            // Nếu bị rate limit hoặc lỗi, chuyển key tiếp
+            if (response.status === 429 || response.status === 400 || response.status === 403) {
+                console.log('Key ' + currentKeyIndex + ' lỗi ' + response.status + ', chuyển key...');
+                currentKeyIndex = (currentKeyIndex + 1) % GEMINI_API_KEYS.length;
+                await new Promise(function(r) { setTimeout(r, 300); });
                 continue;
             }
 
@@ -102,7 +106,8 @@ async function callGemini(prompt) {
                 return data.candidates[0].content.parts[0].text;
             }
         } catch (err) {
-            console.error('Lỗi model ' + GEMINI_MODELS[i] + ':', err);
+            console.error('Lỗi key ' + currentKeyIndex + ':', err);
+            currentKeyIndex = (currentKeyIndex + 1) % GEMINI_API_KEYS.length;
             continue;
         }
     }
