@@ -109,12 +109,18 @@ formatBtn.addEventListener('click', async function() {
     formatBtn.querySelector('.btn-text').textContent = 'Đang sắp xếp...';
     formatBtn.disabled = true;
 
-    var prompt = 'Bạn là trợ lý định dạng văn bản. Hãy sắp xếp lại đoạn văn bản sau thành dạng có cấu trúc rõ ràng để xuất ra file Word đẹp. Quy tắc:\n' +
+    var prompt = 'Bạn là trợ lý định dạng văn bản chuyên nghiệp. Hãy sắp xếp lại đoạn văn bản sau thành dạng có cấu trúc đẹp, rõ ràng để xuất ra file Word chuyên nghiệp. Quy tắc:\n' +
         '- Nhận diện tiêu đề chính, đặt trên 1 dòng riêng với # ở đầu\n' +
-        '- Nhận diện tiêu đề phụ, đặt trên 1 dòng riêng với ## ở đầu\n' +
+        '- Nhận diện tiêu đề phụ/mục, đặt trên 1 dòng riêng với ## ở đầu\n' +
         '- Nhận diện các mục liệt kê, đặt mỗi mục 1 dòng với * ở đầu\n' +
+        '- Nếu có dữ liệu dạng so sánh hoặc nhiều cột thông tin, hãy tạo bảng dùng cú pháp:\n' +
+        '  [TABLE]\n' +
+        '  Cột 1 | Cột 2 | Cột 3\n' +
+        '  Dữ liệu 1 | Dữ liệu 2 | Dữ liệu 3\n' +
+        '  [/TABLE]\n' +
+        '- Đánh số thứ tự các phần lớn (1. 2. 3.)\n' +
         '- Các đoạn văn bản thường thì tách riêng bằng dòng trống\n' +
-        '- Giữ nguyên nội dung, KHÔNG thêm bớt ý, KHÔNG dịch, KHÔNG giải thích\n' +
+        '- Giữ nguyên nội dung, KHÔNG thêm bớt ý, KHÔNG dịch, KHÔNG giải thích thêm\n' +
         '- Chỉ trả về văn bản đã sắp xếp, không thêm gì khác\n\n' +
         'Văn bản cần sắp xếp:\n' + text;
 
@@ -152,40 +158,82 @@ function getFileName() {
 function buildWordHtml(text) {
     var lines = text.split('\n');
     var html = '';
+    var inTable = false;
+    var tableRows = [];
 
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
 
+        // Bắt đầu bảng
+        if (line.trim() === '[TABLE]') {
+            inTable = true;
+            tableRows = [];
+            continue;
+        }
+
+        // Kết thúc bảng
+        if (line.trim() === '[/TABLE]') {
+            inTable = false;
+            if (tableRows.length > 0) {
+                html += '<table style="border-collapse:collapse;width:100%;font-family:Times New Roman,serif;font-size:12pt;margin:12px 0;">';
+                for (var r = 0; r < tableRows.length; r++) {
+                    var cells = tableRows[r].split('|');
+                    html += '<tr>';
+                    for (var c = 0; c < cells.length; c++) {
+                        var tag = r === 0 ? 'th' : 'td';
+                        var bgStyle = r === 0 ? 'background:#f0f0f0;font-weight:bold;' : '';
+                        html += '<' + tag + ' style="border:1px solid #333;padding:8px;' + bgStyle + '">' + escapeHtml(cells[c].trim()) + '</' + tag + '>';
+                    }
+                    html += '</tr>';
+                }
+                html += '</table>';
+            }
+            continue;
+        }
+
+        // Trong bảng
+        if (inTable) {
+            if (line.trim()) tableRows.push(line);
+            continue;
+        }
+
+        // Dòng trống
         if (line.trim() === '') {
             html += '<p style="font-family:Times New Roman,serif;font-size:12pt;">&nbsp;</p>';
             continue;
         }
 
+        // Heading 1
         if (line.indexOf('# ') === 0 && line.indexOf('## ') !== 0) {
             html += '<h1 style="font-family:Times New Roman,serif;font-size:16pt;font-weight:bold;text-align:center;">' + escapeHtml(line.substring(2)) + '</h1>';
             continue;
         }
 
+        // Heading 2
         if (line.indexOf('## ') === 0 && line.indexOf('### ') !== 0) {
             html += '<h2 style="font-family:Times New Roman,serif;font-size:14pt;font-weight:bold;">' + escapeHtml(line.substring(3)) + '</h2>';
             continue;
         }
 
+        // Heading 3
         if (line.indexOf('### ') === 0) {
             html += '<h3 style="font-family:Times New Roman,serif;font-size:13pt;font-weight:bold;">' + escapeHtml(line.substring(4)) + '</h3>';
             continue;
         }
 
+        // Bullet
         if (/^\s*[\*\-]\s+/.test(line)) {
             html += '<p style="font-family:Times New Roman,serif;font-size:12pt;margin-left:24px;line-height:1.5;">&#8226; ' + escapeHtml(line.replace(/^\s*[\*\-]\s+/, '')) + '</p>';
             continue;
         }
 
+        // Numbered list
         if (/^\s*\d+[\.\)]\s+/.test(line)) {
             html += '<p style="font-family:Times New Roman,serif;font-size:12pt;margin-left:24px;line-height:1.5;">' + escapeHtml(line) + '</p>';
             continue;
         }
 
+        // Normal paragraph
         html += '<p style="font-family:Times New Roman,serif;font-size:12pt;line-height:1.5;">' + escapeHtml(line) + '</p>';
     }
 
