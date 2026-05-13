@@ -15,7 +15,7 @@ const aiYes = document.getElementById('ai-yes');
 const aiNo = document.getElementById('ai-no');
 
 // ===== GEMINI API =====
-const GEMINI_API_KEY = 'AIzaSyAAZdbQyosFx3T6hbCVltw43D0NdKFA2ss';
+const GEMINI_API_KEY = 'AIzaSyDtBFE0SpS871QL7FCfwLBNjXjkLn4g3QQ';
 const GEMINI_MODELS = [
     'gemini-flash-latest',
     'gemini-2.0-flash-lite',
