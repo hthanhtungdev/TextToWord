@@ -9,7 +9,7 @@ const toastText = document.getElementById('toast-text');
 
 // ===== GEMINI API KEY =====
 const GEMINI_API_KEY = 'AIzaSyAAZdbQyosFx3T6hbCVltw43D0NdKFA2ss';
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent';
 
 // Enable/disable buttons
 contentArea.addEventListener('input', function() {
