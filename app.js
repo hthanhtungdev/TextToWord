@@ -88,8 +88,7 @@ async function copyAsDocFile() {
         // Thử share file (hoạt động tốt trên mobile)
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({
-                files: [file],
-                title: 'Document',
+                files: [file]
             });
             showToast('✅ Đã chia sẻ file Word!');
         } else {
