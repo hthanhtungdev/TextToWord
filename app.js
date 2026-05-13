@@ -22,46 +22,38 @@ function showToast(message) {
     }, 3000);
 }
 
-// ===== TẠO FILE DOCX BẰNG TÍNH NĂNG NHẸ (không cần thư viện nặng) =====
-function generateDocxBlob(text) {
-    // Tạo file .docx đơn giản bằng HTML -> Blob
-    // Microsoft Word có thể mở file HTML với đuôi .doc
+// ===== CHUYỂN TEXT THÀNH HTML CÓ ĐỊNH DẠNG =====
+function textToFormattedHtml(text) {
     var lines = text.split('\n');
-    var htmlContent = '';
+    var html = '';
 
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
 
         if (line.trim() === '') {
-            htmlContent += '<p>&nbsp;</p>';
+            html += '<br>';
             continue;
         }
 
         if (line.indexOf('# ') === 0) {
-            htmlContent += '<h1>' + escapeHtml(line.substring(2)) + '</h1>';
+            html += '<h1 style="font-family:Times New Roman,serif;font-size:16pt;font-weight:bold;">' + escapeHtml(line.substring(2)) + '</h1>';
             continue;
         }
 
         if (line.indexOf('## ') === 0) {
-            htmlContent += '<h2>' + escapeHtml(line.substring(3)) + '</h2>';
+            html += '<h2 style="font-family:Times New Roman,serif;font-size:14pt;font-weight:bold;">' + escapeHtml(line.substring(3)) + '</h2>';
             continue;
         }
 
         if (/^\s*[\*\-]\s+/.test(line)) {
-            htmlContent += '<li>' + escapeHtml(line.replace(/^\s*[\*\-]\s+/, '')) + '</li>';
+            html += '<p style="font-family:Times New Roman,serif;font-size:12pt;margin:4px 0 4px 20px;">• ' + escapeHtml(line.replace(/^\s*[\*\-]\s+/, '')) + '</p>';
             continue;
         }
 
-        htmlContent += '<p>' + escapeHtml(line) + '</p>';
+        html += '<p style="font-family:Times New Roman,serif;font-size:12pt;line-height:1.5;margin:4px 0;">' + escapeHtml(line) + '</p>';
     }
 
-    // Wrap li tags in ul
-    htmlContent = htmlContent.replace(/(<li>.*?<\/li>)+/g, '<ul>$&</ul>');
-
-    var fullHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:"Times New Roman",serif;font-size:12pt;line-height:1.5;}h1{font-size:16pt;font-weight:bold;}h2{font-size:14pt;font-weight:bold;}p{margin:6pt 0;}ul{margin:6pt 0 6pt 20pt;}</style></head><body>' + htmlContent + '</body></html>';
-
-    var blob = new Blob([fullHtml], { type: 'application/msword' });
-    return blob;
+    return html;
 }
 
 function escapeHtml(text) {
@@ -70,12 +62,67 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// ===== DOWNLOAD FILE (cả PC và Mobile) =====
-function downloadFile() {
+// ===== COPY RICH TEXT (HTML) VÀO CLIPBOARD =====
+// Khi dán vào Word/Google Docs sẽ giữ định dạng
+function copyRichText() {
     var text = contentArea.value.trim();
     if (!text) return;
 
-    var blob = generateDocxBlob(text);
+    var html = textToFormattedHtml(text);
+
+    // Dùng Clipboard API với HTML mime type
+    if (navigator.clipboard && navigator.clipboard.write) {
+        var htmlBlob = new Blob([html], { type: 'text/html' });
+        var textBlob = new Blob([text], { type: 'text/plain' });
+        var item = new ClipboardItem({
+            'text/html': htmlBlob,
+            'text/plain': textBlob
+        });
+        navigator.clipboard.write([item]).then(function() {
+            showToast('✅ Đã copy! Dán vào Word sẽ có định dạng.');
+            copyBtn.querySelector('.btn-text').textContent = 'Đã copy ✓';
+            setTimeout(function() {
+                copyBtn.querySelector('.btn-text').textContent = 'Copy định dạng Word';
+            }, 2000);
+        }).catch(function() {
+            fallbackCopy(text);
+        });
+    } else {
+        fallbackCopy(text);
+    }
+}
+
+// Fallback cho trình duyệt không hỗ trợ ClipboardItem
+function fallbackCopy(text) {
+    var textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    showToast('✅ Đã copy! Dán vào Word nhé.');
+    copyBtn.querySelector('.btn-text').textContent = 'Đã copy ✓';
+    setTimeout(function() {
+        copyBtn.querySelector('.btn-text').textContent = 'Copy định dạng Word';
+    }, 2000);
+}
+
+// ===== NÚT COPY (Mobile) =====
+copyBtn.addEventListener('click', function() {
+    copyRichText();
+});
+
+// ===== NÚT DOWNLOAD (PC) =====
+downloadBtn.addEventListener('click', function() {
+    var text = contentArea.value.trim();
+    if (!text) return;
+
+    var html = textToFormattedHtml(text);
+    var fullHtml = '<html><head><meta charset="utf-8"></head><body>' + html + '</body></html>';
+    var blob = new Blob([fullHtml], { type: 'application/msword' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
@@ -84,15 +131,16 @@ function downloadFile() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showToast('✅ Đã tải file Word thành công!');
-}
-
-// ===== NÚT COPY (Mobile) =====
-copyBtn.addEventListener('click', function() {
-    downloadFile();
+    showToast('✅ Đã tải file Word!');
 });
 
-// ===== NÚT DOWNLOAD (PC) =====
-downloadBtn.addEventListener('click', function() {
-    downloadFile();
+// Ctrl+Enter shortcut
+document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        if (window.innerWidth > 768 && !downloadBtn.disabled) {
+            downloadBtn.click();
+        } else if (!copyBtn.disabled) {
+            copyBtn.click();
+        }
+    }
 });
