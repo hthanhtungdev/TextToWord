@@ -10,7 +10,9 @@ const actionHint = document.getElementById('action-hint');
 const toast = document.getElementById('toast');
 const toastText = document.getElementById('toast-text');
 
-// ===== GEMINI API =====
+// ===== AI APIs =====
+// Dùng Pollinations AI (miễn phí, không key, không giới hạn) làm chính
+// Gemini làm backup
 const GEMINI_API_KEYS = [
     'AIzaSyDtBFE0SpS871QL7FCfwLBNjXjkLn4g3QQ',
     'AIzaSyAuRhdMA-icS7yJtdY0x4dCLIsyW0K5j6w',
@@ -42,13 +44,36 @@ function showToast(message) {
 
 // ===== AUTO AI KHI PASTE (đã tắt) =====
 
-// ===== GỌI GEMINI API =====
-async function callGemini(prompt) {
-    // Thử tất cả keys, xoay vòng nếu bị rate limit
+// ===== GỌI AI API =====
+// Thử Pollinations trước (miễn phí, không giới hạn), nếu lỗi thì dùng Gemini
+async function callAI(prompt) {
+    // 1. Thử Pollinations AI (không cần key)
+    try {
+        var response = await fetch('https://text.pollinations.ai/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: [{ role: 'user', content: prompt }],
+                model: 'openai',
+                seed: 42
+            })
+        });
+
+        if (response.ok) {
+            var text = await response.text();
+            if (text && text.length > 10) {
+                return text;
+            }
+        }
+    } catch (err) {
+        console.log('Pollinations lỗi, thử Gemini...');
+    }
+
+    // 2. Fallback: Gemini (xoay key)
     for (var attempt = 0; attempt < GEMINI_API_KEYS.length; attempt++) {
         var url = getGeminiUrl();
         try {
-            var response = await fetch(url, {
+            var resp = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -56,20 +81,17 @@ async function callGemini(prompt) {
                 })
             });
 
-            // Nếu bị rate limit hoặc lỗi, chuyển key tiếp
-            if (response.status === 429 || response.status === 400 || response.status === 403) {
-                console.log('Key ' + currentKeyIndex + ' lỗi ' + response.status + ', chuyển key...');
+            if (resp.status === 429 || resp.status === 400 || resp.status === 403) {
                 currentKeyIndex = (currentKeyIndex + 1) % GEMINI_API_KEYS.length;
                 await new Promise(function(r) { setTimeout(r, 300); });
                 continue;
             }
 
-            var data = await response.json();
+            var data = await resp.json();
             if (data.candidates && data.candidates[0] && data.candidates[0].content) {
                 return data.candidates[0].content.parts[0].text;
             }
         } catch (err) {
-            console.error('Lỗi key ' + currentKeyIndex + ':', err);
             currentKeyIndex = (currentKeyIndex + 1) % GEMINI_API_KEYS.length;
             continue;
         }
@@ -96,7 +118,7 @@ formatBtn.addEventListener('click', async function() {
         '- Chỉ trả về văn bản đã sắp xếp, không thêm gì khác\n\n' +
         'Văn bản cần sắp xếp:\n' + text;
 
-    var result = await callGemini(prompt);
+    var result = await callAI(prompt);
 
     if (result) {
         result = result.replace(/^```[a-z]*\n?/gm, '').replace(/```$/gm, '').trim();
