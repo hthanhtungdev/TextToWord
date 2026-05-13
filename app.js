@@ -22,8 +22,14 @@ function showToast(message) {
     }, 3000);
 }
 
-// ===== CHUYỂN TEXT THÀNH HTML CÓ ĐỊNH DẠNG =====
-function textToFormattedHtml(text) {
+function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ===== TẠO NỘI DUNG HTML CHO FILE WORD =====
+function buildWordHtml(text) {
     var lines = text.split('\n');
     var html = '';
 
@@ -31,7 +37,7 @@ function textToFormattedHtml(text) {
         var line = lines[i];
 
         if (line.trim() === '') {
-            html += '<br>';
+            html += '<p style="font-family:Times New Roman,serif;font-size:12pt;">&nbsp;</p>';
             continue;
         }
 
@@ -46,83 +52,23 @@ function textToFormattedHtml(text) {
         }
 
         if (/^\s*[\*\-]\s+/.test(line)) {
-            html += '<p style="font-family:Times New Roman,serif;font-size:12pt;margin:4px 0 4px 20px;">• ' + escapeHtml(line.replace(/^\s*[\*\-]\s+/, '')) + '</p>';
+            html += '<p style="font-family:Times New Roman,serif;font-size:12pt;margin-left:20px;">• ' + escapeHtml(line.replace(/^\s*[\*\-]\s+/, '')) + '</p>';
             continue;
         }
 
-        html += '<p style="font-family:Times New Roman,serif;font-size:12pt;line-height:1.5;margin:4px 0;">' + escapeHtml(line) + '</p>';
+        html += '<p style="font-family:Times New Roman,serif;font-size:12pt;line-height:1.5;">' + escapeHtml(line) + '</p>';
     }
 
-    return html;
+    return '<html><head><meta charset="utf-8"></head><body>' + html + '</body></html>';
 }
 
-function escapeHtml(text) {
-    var div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// ===== COPY RICH TEXT (HTML) VÀO CLIPBOARD =====
-// Khi dán vào Word/Google Docs sẽ giữ định dạng
-function copyRichText() {
+// ===== TẢI FILE .DOC =====
+function downloadDocFile() {
     var text = contentArea.value.trim();
     if (!text) return;
 
-    var html = textToFormattedHtml(text);
-
-    // Dùng Clipboard API với HTML mime type
-    if (navigator.clipboard && navigator.clipboard.write) {
-        var htmlBlob = new Blob([html], { type: 'text/html' });
-        var textBlob = new Blob([text], { type: 'text/plain' });
-        var item = new ClipboardItem({
-            'text/html': htmlBlob,
-            'text/plain': textBlob
-        });
-        navigator.clipboard.write([item]).then(function() {
-            showToast('✅ Đã copy! Dán vào Word sẽ có định dạng.');
-            copyBtn.querySelector('.btn-text').textContent = 'Đã copy ✓';
-            setTimeout(function() {
-                copyBtn.querySelector('.btn-text').textContent = 'Copy định dạng Word';
-            }, 2000);
-        }).catch(function() {
-            fallbackCopy(text);
-        });
-    } else {
-        fallbackCopy(text);
-    }
-}
-
-// Fallback cho trình duyệt không hỗ trợ ClipboardItem
-function fallbackCopy(text) {
-    var textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.opacity = '0';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    showToast('✅ Đã copy! Dán vào Word nhé.');
-    copyBtn.querySelector('.btn-text').textContent = 'Đã copy ✓';
-    setTimeout(function() {
-        copyBtn.querySelector('.btn-text').textContent = 'Copy định dạng Word';
-    }, 2000);
-}
-
-// ===== NÚT COPY (Mobile) =====
-copyBtn.addEventListener('click', function() {
-    copyRichText();
-});
-
-// ===== NÚT DOWNLOAD (PC) =====
-downloadBtn.addEventListener('click', function() {
-    var text = contentArea.value.trim();
-    if (!text) return;
-
-    var html = textToFormattedHtml(text);
-    var fullHtml = '<html><head><meta charset="utf-8"></head><body>' + html + '</body></html>';
-    var blob = new Blob([fullHtml], { type: 'application/msword' });
+    var html = buildWordHtml(text);
+    var blob = new Blob(['\ufeff' + html], { type: 'application/msword' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
@@ -130,17 +76,24 @@ downloadBtn.addEventListener('click', function() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 100);
     showToast('✅ Đã tải file Word!');
+}
+
+// Cả 2 nút đều tải file .doc
+copyBtn.addEventListener('click', function() {
+    downloadDocFile();
+});
+
+downloadBtn.addEventListener('click', function() {
+    downloadDocFile();
 });
 
 // Ctrl+Enter shortcut
 document.addEventListener('keydown', function(e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        if (window.innerWidth > 768 && !downloadBtn.disabled) {
-            downloadBtn.click();
-        } else if (!copyBtn.disabled) {
-            copyBtn.click();
+        if (!downloadBtn.disabled || !copyBtn.disabled) {
+            downloadDocFile();
         }
     }
 });
