@@ -11,8 +11,7 @@ const toast = document.getElementById('toast');
 const toastText = document.getElementById('toast-text');
 
 // ===== AI APIs =====
-// Dùng Pollinations AI (miễn phí, không key, không giới hạn) làm chính
-// Gemini làm backup
+// Dùng Gemini với nhiều keys xoay vòng
 const GEMINI_API_KEYS = [
     'AIzaSyDtBFE0SpS871QL7FCfwLBNjXjkLn4g3QQ',
     'AIzaSyAuRhdMA-icS7yJtdY0x4dCLIsyW0K5j6w',
@@ -23,7 +22,7 @@ var currentKeyIndex = 0;
 
 function getGeminiUrl() {
     var key = GEMINI_API_KEYS[currentKeyIndex];
-    return 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' + key;
+    return 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + key;
 }
 
 // ===== ENABLE/DISABLE BUTTONS =====
@@ -45,39 +44,8 @@ function showToast(message) {
 // ===== AUTO AI KHI PASTE (đã tắt) =====
 
 // ===== GỌI AI API =====
-// Thử Pollinations trước (miễn phí, không giới hạn), nếu lỗi thì dùng Gemini
 async function callAI(prompt) {
-    // 1. Thử Pollinations AI (không cần key)
-    try {
-        var response = await fetch('https://text.pollinations.ai/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                messages: [
-                    { role: 'system', content: 'You are a text formatting assistant. Only return the formatted text. No explanations, no reasoning, no JSON, no markdown code blocks. Just output the restructured Vietnamese text directly.' },
-                    { role: 'user', content: prompt }
-                ],
-                model: 'openai',
-                seed: 42,
-                jsonMode: false
-            })
-        });
-
-        if (response.ok) {
-            var text = await response.text();
-            // Pollinations trả về JSON với reasoning -> bỏ qua, dùng Gemini
-            if (text.startsWith('{') || text.indexOf('"reasoning"') !== -1 || text.indexOf('"role":"assistant"') !== -1) {
-                console.log('Pollinations trả JSON reasoning, bỏ qua...');
-                // Không dùng Pollinations, chuyển sang Gemini
-            } else if (text && text.length > 10) {
-                return text;
-            }
-        }
-    } catch (err) {
-        console.log('Pollinations lỗi, thử Gemini...');
-    }
-
-    // 2. Fallback: Gemini (xoay key)
+    // Chỉ dùng Gemini, xoay key
     for (var attempt = 0; attempt < GEMINI_API_KEYS.length; attempt++) {
         var url = getGeminiUrl();
         try {
@@ -85,7 +53,10 @@ async function callAI(prompt) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }]
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        maxOutputTokens: 8192
+                    }
                 })
             });
 
@@ -117,7 +88,19 @@ formatBtn.addEventListener('click', async function() {
     formatBtn.querySelector('.btn-text').textContent = 'Đang sắp xếp...';
     formatBtn.disabled = true;
 
-    var prompt = 'Sắp xếp văn bản sau thành file Word đẹp. Trả về HTML hoàn chỉnh với định dạng Word (font Times New Roman 13pt, heading in đậm, bullet có dấu chấm, bảng nếu cần). KHÔNG giải thích, KHÔNG thêm bớt nội dung. Chỉ trả về HTML thuần.\n\nVăn bản:\n' + text;
+    var prompt = 'Bạn là trợ lý tạo tài liệu Word chuyên nghiệp. Hãy nhận đoạn văn bản dưới đây và trả về MỘT đoạn HTML hoàn chỉnh để mở bằng Microsoft Word đẹp nhất có thể.\n\n' +
+        'YÊU CẦU ĐỊNH DẠNG HTML:\n' +
+        '- Dùng <h1> căn giữa, in đậm, cỡ 18pt cho tiêu đề chính\n' +
+        '- Dùng <h2> in đậm, cỡ 14pt cho tiêu đề phụ\n' +
+        '- Dùng <h3> in đậm, cỡ 13pt cho tiêu đề nhỏ\n' +
+        '- Dùng <ul><li> cho danh sách\n' +
+        '- Dùng <table border="1"> cho dữ liệu dạng bảng\n' +
+        '- Dùng <p> cho đoạn văn, line-height 1.6\n' +
+        '- Font: Times New Roman, cỡ 13pt\n' +
+        '- Margin body: 2.5cm\n' +
+        '- GIỮ NGUYÊN TOÀN BỘ nội dung, không thêm không bớt\n' +
+        '- CHỈ trả về HTML, bắt đầu từ <html>, KHÔNG giải thích gì\n\n' +
+        'VĂN BẢN:\n' + text;
 
     var result = await callAI(prompt);
 
@@ -168,7 +151,7 @@ formatBtn.addEventListener('click', async function() {
 
     // Reset button
     formatBtn.classList.remove('loading');
-    formatBtn.querySelector('.btn-text').textContent = '✨ AI Sắp xếp văn bản';
+    formatBtn.querySelector('.btn-text').textContent = '✨ AI tạo file Word';
     formatBtn.disabled = contentArea.value.trim().length === 0;
 });
 
