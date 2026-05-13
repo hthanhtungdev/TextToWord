@@ -117,26 +117,48 @@ formatBtn.addEventListener('click', async function() {
     formatBtn.querySelector('.btn-text').textContent = 'Đang sắp xếp...';
     formatBtn.disabled = true;
 
-    var prompt = 'Sắp xếp lại văn bản sau. Quy tắc:\n' +
-        '- # cho tiêu đề chính\n' +
-        '- ## cho tiêu đề phụ\n' +
-        '- * cho liệt kê (KHÔNG dùng -)\n' +
-        '- Tách đoạn bằng dòng trống\n' +
-        '- KHÔNG dùng **bold**\n' +
-        '- GIỮ NGUYÊN TOÀN BỘ nội dung, trả về ĐẦY ĐỦ không được bỏ sót\n' +
-        '- Chỉ trả văn bản đã sắp xếp\n\n' + text;
+    var prompt = 'Sắp xếp văn bản sau thành file Word đẹp. Trả về HTML hoàn chỉnh với định dạng Word (font Times New Roman 13pt, heading in đậm, bullet có dấu chấm, bảng nếu cần). KHÔNG giải thích, KHÔNG thêm bớt nội dung. Chỉ trả về HTML thuần.\n\nVăn bản:\n' + text;
 
     var result = await callAI(prompt);
 
     if (result) {
         result = result.replace(/^```[a-z]*\n?/gm, '').replace(/```$/gm, '').trim();
-        // Nếu AI trả về quá ngắn so với input (bị cắt), giữ nguyên input
-        if (result.length < text.length * 0.4) {
-            showToast('⚠️ AI trả về thiếu, giữ nguyên văn bản.');
+        
+        // Nếu AI trả về HTML trực tiếp -> dùng luôn làm file Word
+        if (result.indexOf('<') !== -1 && (result.indexOf('<h1') !== -1 || result.indexOf('<p') !== -1 || result.indexOf('<html') !== -1)) {
+            // AI trả HTML -> lưu trực tiếp thành file Word
+            var htmlContent = result;
+            if (htmlContent.indexOf('<html') === -1) {
+                htmlContent = '<html><head><meta charset="utf-8"></head><body style="margin:40px;">' + htmlContent + '</body></html>';
+            }
+            var blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
+            var fileName = getFileName();
+            
+            // Mobile: share, PC: download
+            if (window.innerWidth <= 768 && navigator.canShare) {
+                try {
+                    var file = new File([blob], fileName + '.doc', { type: 'application/msword' });
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file] });
+                        showToast('✅ Đã chia sẻ file Word!');
+                    } else {
+                        downloadBlob(blob, fileName);
+                    }
+                } catch(e) {
+                    if (e.name !== 'AbortError') downloadBlob(blob, fileName);
+                }
+            } else {
+                downloadBlob(blob, fileName);
+            }
         } else {
-            contentArea.value = result;
-            contentArea.dispatchEvent(new Event('input'));
-            showToast('✅ Đã sắp xếp xong!');
+            // AI trả text thuần -> hiển thị trong textarea
+            if (result.length < text.length * 0.4) {
+                showToast('⚠️ AI trả về thiếu, giữ nguyên văn bản.');
+            } else {
+                contentArea.value = result;
+                contentArea.dispatchEvent(new Event('input'));
+                showToast('✅ Đã sắp xếp xong! Bấm tải file.');
+            }
         }
         contentArea.dispatchEvent(new Event('input'));
         showToast('✅ Đã sắp xếp xong!');
@@ -248,6 +270,19 @@ function buildWordHtml(text) {
     }
 
     return '<html><head><meta charset="utf-8"></head><body style="margin:40px;">' + html + '</body></html>';
+}
+
+// ===== DOWNLOAD BLOB HELPER =====
+function downloadBlob(blob, fileName) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = fileName + '.doc';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 100);
+    showToast('✅ Đã tải file Word!');
 }
 
 // ===== SHARE FILE (Mobile) =====
