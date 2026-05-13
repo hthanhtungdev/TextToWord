@@ -36,7 +36,8 @@ async function callAI(text) {
         '- Phần lớn (I, II, III): <h2> cỡ 18pt, in đậm\n' +
         '- Mục con (1, 2, 3): <h3> cỡ 14pt, in đậm\n' +
         '- Có đoạn mở đầu giới thiệu ngắn cho mỗi phần\n' +
-        '- Bullet list dùng <ul><li> với label in đậm: <strong>Label:</strong> nội dung\n' +
+        '- Bullet list dùng <ul><li>, nếu item có phần đầu quan trọng thì in đậm phần đó\n' +
+        '- KHÔNG thêm chữ "Label:" vào bullet, giữ nguyên nội dung gốc\n' +
         '- Sub-list lồng nhau: <ul><li> bên trong <li> cha, dùng circle style\n' +
         '- Số liệu so sánh dùng <table> có header nền xám, border, padding 10px\n' +
         '- Font: Times New Roman 13pt, line-height 1.8\n' +
