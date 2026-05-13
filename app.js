@@ -54,7 +54,7 @@ async function callAI(prompt) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 messages: [
-                    { role: 'system', content: 'You are a text formatting assistant. Only return the formatted text, nothing else. No explanations, no reasoning, no JSON. Just the formatted Vietnamese text.' },
+                    { role: 'system', content: 'You are a text formatting assistant. Only return the formatted text. No explanations, no reasoning, no JSON, no markdown code blocks. Just output the restructured Vietnamese text directly.' },
                     { role: 'user', content: prompt }
                 ],
                 model: 'openai',
@@ -65,16 +65,11 @@ async function callAI(prompt) {
 
         if (response.ok) {
             var text = await response.text();
-            // Loại bỏ JSON wrapper nếu có
-            if (text.startsWith('{')) {
-                try {
-                    var json = JSON.parse(text);
-                    if (json.content) text = json.content;
-                    else if (json.text) text = json.text;
-                    else if (json.choices && json.choices[0]) text = json.choices[0].message.content;
-                } catch(e) {}
-            }
-            if (text && text.length > 10 && !text.startsWith('{"role"')) {
+            // Pollinations trả về JSON với reasoning -> bỏ qua, dùng Gemini
+            if (text.startsWith('{') || text.indexOf('"reasoning"') !== -1 || text.indexOf('"role":"assistant"') !== -1) {
+                console.log('Pollinations trả JSON reasoning, bỏ qua...');
+                // Không dùng Pollinations, chuyển sang Gemini
+            } else if (text && text.length > 10) {
                 return text;
             }
         }
