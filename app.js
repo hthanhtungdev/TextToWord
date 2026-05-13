@@ -22,7 +22,7 @@ var currentKeyIndex = 0;
 
 function getGeminiUrl() {
     var key = GEMINI_API_KEYS[currentKeyIndex];
-    return 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + key;
+    return 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' + key;
 }
 
 // ===== ENABLE/DISABLE BUTTONS =====
