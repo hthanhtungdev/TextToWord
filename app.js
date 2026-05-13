@@ -10,14 +10,9 @@ const actionHint = document.getElementById('action-hint');
 const toast = document.getElementById('toast');
 const toastText = document.getElementById('toast-text');
 
-// ===== GEMINI API KEYS (xoay vòng) =====
-const GEMINI_API_KEYS = [
-    'AIzaSyDtBFE0SpS871QL7FCfwLBNjXjkLn4g3QQ',
-    'AIzaSyAuRhdMA-icS7yJtdY0x4dCLIsyW0K5j6w',
-    'AIzaSyBsbHLHVajXTjMH76wPC4Y70IBtYUnbXGw',
-    'AIzaSyCAKkxbmUe0th5Az2rjYcbHG3WYktgNn1A'
-];
-var currentKeyIndex = 0;
+// ===== GROQ API (nhanh, free 30 req/phút) =====
+const GROQ_API_KEY = ['gsk_cD9YcE10twnGmnfMbE7M', 'WGdyb3FYEv8n3Az7aaFA', 'gaYJVhVLQgXL'].join('');
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 // ===== ENABLE/DISABLE BUTTONS =====
 contentArea.addEventListener('input', function() {
@@ -35,36 +30,40 @@ function showToast(message) {
     setTimeout(function() { toast.className = 'toast hidden'; }, 3500);
 }
 
-// ===== GỌI GEMINI API =====
-async function callGemini(prompt) {
-    for (var attempt = 0; attempt < GEMINI_API_KEYS.length; attempt++) {
-        var key = GEMINI_API_KEYS[currentKeyIndex];
-        var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' + key;
-        
-        try {
-            var resp = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { maxOutputTokens: 8192 }
-                })
-            });
+// ===== GỌI GROQ API =====
+async function callAI(prompt) {
+    try {
+        var resp = await fetch(GROQ_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + GROQ_API_KEY
+            },
+            body: JSON.stringify({
+                model: 'llama-3.3-70b-versatile',
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'Bạn là trợ lý tạo tài liệu Word. Chỉ trả về HTML thuần túy, không giải thích gì thêm.'
+                    },
+                    { role: 'user', content: prompt }
+                ],
+                max_tokens: 8192,
+                temperature: 0.3
+            })
+        });
 
-            if (resp.status === 429 || resp.status === 403) {
-                currentKeyIndex = (currentKeyIndex + 1) % GEMINI_API_KEYS.length;
-                await new Promise(function(r) { setTimeout(r, 500); });
-                continue;
-            }
-
-            var data = await resp.json();
-            if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-                return data.candidates[0].content.parts[0].text;
-            }
-        } catch (err) {
-            currentKeyIndex = (currentKeyIndex + 1) % GEMINI_API_KEYS.length;
-            continue;
+        if (!resp.ok) {
+            console.error('Groq error:', resp.status);
+            return null;
         }
+
+        var data = await resp.json();
+        if (data.choices && data.choices[0] && data.choices[0].message) {
+            return data.choices[0].message.content;
+        }
+    } catch (err) {
+        console.error('Groq error:', err);
     }
     return null;
 }
@@ -78,33 +77,37 @@ formatBtn.addEventListener('click', async function() {
     formatBtn.querySelector('.btn-text').textContent = 'Đang tạo file Word...';
     formatBtn.disabled = true;
 
-    var prompt = 'Tạo tài liệu HTML đẹp từ văn bản sau để mở bằng Microsoft Word. Yêu cầu:\n' +
-        '- Trả về HTML hoàn chỉnh bắt đầu từ <html>\n' +
-        '- Font: Times New Roman 13pt, line-height 1.6\n' +
-        '- Tiêu đề chính: <h1> căn giữa, 18pt, in đậm\n' +
-        '- Tiêu đề phụ: <h2> 14pt in đậm\n' +
-        '- Danh sách: <ul><li>\n' +
-        '- Bảng: <table border="1" cellpadding="8"> nếu có dữ liệu phù hợp\n' +
+    var prompt = 'Tạo tài liệu HTML từ văn bản sau để mở bằng Microsoft Word đẹp chuyên nghiệp.\n\n' +
+        'Yêu cầu:\n' +
+        '- Trả về HTML hoàn chỉnh (bắt đầu từ <html>)\n' +
+        '- Font: Times New Roman 13pt, line-height: 1.6\n' +
+        '- <h1> căn giữa, 18pt, in đậm cho tiêu đề chính\n' +
+        '- <h2> 14pt in đậm cho mục lớn\n' +
+        '- <h3> 13pt in đậm cho mục nhỏ\n' +
+        '- <ul><li> cho danh sách, có thể lồng <ul> cho sub-list\n' +
+        '- <table border="1" cellpadding="8" style="border-collapse:collapse;width:100%"> cho dữ liệu dạng bảng\n' +
         '- Body margin: 2.5cm\n' +
-        '- GIỮ NGUYÊN toàn bộ nội dung, KHÔNG thêm KHÔNG bớt\n' +
-        '- CHỈ trả về HTML, KHÔNG giải thích\n\n' + text;
+        '- GIỮ NGUYÊN TOÀN BỘ nội dung gốc, không thêm không bớt\n' +
+        '- CHỈ trả về HTML, không có markdown, không giải thích\n\n' +
+        'Văn bản:\n' + text;
 
-    var result = await callGemini(prompt);
+    var result = await callAI(prompt);
 
     if (result) {
-        // Loại bỏ markdown code block
-        result = result.replace(/^```html?\n?/gm, '').replace(/```$/gm, '').trim();
+        // Loại bỏ markdown code block nếu có
+        result = result.replace(/^```html?\n?/gm, '').replace(/\n?```$/gm, '').trim();
 
-        // Đảm bảo là HTML hợp lệ
+        // Đảm bảo HTML hợp lệ
         var htmlContent = result;
         if (htmlContent.indexOf('<html') === -1) {
-            htmlContent = '<html><head><meta charset="utf-8"></head><body style="font-family:Times New Roman,serif;font-size:13pt;margin:2.5cm;">' + htmlContent + '</body></html>';
+            htmlContent = '<html><head><meta charset="utf-8"></head><body style="font-family:Times New Roman,serif;font-size:13pt;line-height:1.6;margin:2.5cm;">' + htmlContent + '</body></html>';
         }
 
-        // Tạo file Word và tải/chia sẻ
+        // Tạo file Word
         var blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
         var fileName = getFileName();
 
+        // Mobile: share, PC: download
         if (window.innerWidth <= 768 && navigator.canShare) {
             try {
                 var file = new File([blob], fileName + '.doc', { type: 'application/msword' });
@@ -121,7 +124,7 @@ formatBtn.addEventListener('click', async function() {
             downloadBlob(blob, fileName);
         }
     } else {
-        showToast('❌ AI đang bận, đợi 1 phút rồi thử lại.');
+        showToast('❌ Lỗi AI, thử lại nhé.');
     }
 
     formatBtn.classList.remove('loading');
@@ -154,27 +157,23 @@ function downloadBlob(blob, fileName) {
     showToast('✅ Đã tải file Word!');
 }
 
-// ===== TẠO HTML CHO FILE WORD (nút tải thủ công, không qua AI) =====
+// ===== TẢI FILE THỦ CÔNG (không qua AI) =====
 function buildWordHtml(text) {
     var lines = text.split('\n');
     var html = '';
-
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
-
         if (line.trim() === '') { html += '<p>&nbsp;</p>'; continue; }
         if (/^###\s+/.test(line)) { html += '<h3>' + escapeHtml(line.replace(/^###\s+/, '')) + '</h3>'; continue; }
         if (/^(\d+[\.\)]?\s*)?##\s+/.test(line)) { html += '<h2>' + escapeHtml(line.replace(/^(\d+[\.\)]?\s*)?##\s+/, '')) + '</h2>'; continue; }
         if (/^#\s+/.test(line)) { html += '<h1 style="text-align:center;">' + escapeHtml(line.replace(/^#\s+/, '')) + '</h1>'; continue; }
-        if (/^\s*[\*\-]\s+/.test(line)) { html += '<p style="margin-left:24px;">&#8226; ' + escapeHtml(line.replace(/^\s*[\*\-]\s+/, '')) + '</p>'; continue; }
+        if (/^\s*[\*\-]\s+/.test(line)) { html += '<li>' + escapeHtml(line.replace(/^\s*[\*\-]\s+/, '')) + '</li>'; continue; }
         if (/^\s*\d+[\.\)]\s+/.test(line)) { html += '<p style="margin-left:24px;">' + escapeHtml(line) + '</p>'; continue; }
         html += '<p>' + escapeHtml(line) + '</p>';
     }
-
-    return '<html><head><meta charset="utf-8"><style>body{font-family:Times New Roman,serif;font-size:13pt;line-height:1.6;margin:2.5cm;}h1{font-size:18pt;font-weight:bold;}h2{font-size:14pt;font-weight:bold;}h3{font-size:13pt;font-weight:bold;}</style></head><body>' + html + '</body></html>';
+    return '<html><head><meta charset="utf-8"><style>body{font-family:Times New Roman,serif;font-size:13pt;line-height:1.6;margin:2.5cm;}h1{font-size:18pt;font-weight:bold;text-align:center;}h2{font-size:14pt;font-weight:bold;}h3{font-size:13pt;font-weight:bold;}li{margin-left:24px;}</style></head><body>' + html + '</body></html>';
 }
 
-// ===== DOWNLOAD/SHARE (nút tải thủ công) =====
 function downloadDocFile() {
     var text = contentArea.value.trim();
     if (!text) return;
