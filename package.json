@@ -1,0 +1,8 @@
+{
+  "name": "text-to-word",
+  "version": "1.0.0",
+  "description": "Chuyển đổi văn bản thành file Word (.docx)",
+  "scripts": {
+    "dev": "npx live-server --port=3000"
+  }
+}
