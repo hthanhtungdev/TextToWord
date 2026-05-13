@@ -106,24 +106,24 @@ async function createAndExport(mode) {
         htmlContent = '<html><head><meta charset="utf-8"></head><body style="font-family:Times New Roman,serif;font-size:13pt;line-height:1.8;margin:2.5cm;">' + htmlContent + '</body></html>';
     }
 
-    // Tạo blob
-    var blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
+    // Tạo blob DOCX
+    var converted = htmlDocx.asBlob(htmlContent);
     var fileName = getFileName();
 
     if (mode === 'share') {
         try {
-            var file = new File([blob], fileName + '.doc', { type: 'application/msword' });
+            var file = new File([converted], fileName + '.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({ files: [file] });
                 showToast('✅ Đã chia sẻ file Word!');
             } else {
-                downloadBlob(blob, fileName);
+                downloadBlob(converted, fileName);
             }
         } catch(e) {
-            if (e.name !== 'AbortError') downloadBlob(blob, fileName);
+            if (e.name !== 'AbortError') downloadBlob(converted, fileName);
         }
     } else {
-        downloadBlob(blob, fileName);
+        downloadBlob(converted, fileName);
     }
 
     // Reset nút
@@ -142,7 +142,7 @@ function downloadBlob(blob, fileName) {
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = fileName + '.doc';
+    a.download = fileName + '.docx';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
