@@ -12,9 +12,9 @@ const GEMINI_API_KEY = 'AIzaSyAAZdbQyosFx3T6hbCVltw43D0NdKFA2ss';
 
 // Thử lần lượt các model, nếu bị rate limit thì chuyển sang model khác
 const GEMINI_MODELS = [
+    'gemini-flash-latest',
     'gemini-2.0-flash-lite',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash'
+    'gemini-2.0-flash'
 ];
 
 function getGeminiUrl(model) {
