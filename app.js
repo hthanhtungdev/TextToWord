@@ -19,125 +19,80 @@ function showToast(message) {
     toast.className = 'toast show';
     setTimeout(function() {
         toast.className = 'toast hidden';
-    }, 2500);
+    }, 3000);
 }
 
-// ===== COPY (Mobile) =====
-copyBtn.addEventListener('click', function() {
+// ===== TẠO FILE DOCX BẰNG TÍNH NĂNG NHẸ (không cần thư viện nặng) =====
+function generateDocxBlob(text) {
+    // Tạo file .docx đơn giản bằng HTML -> Blob
+    // Microsoft Word có thể mở file HTML với đuôi .doc
+    var lines = text.split('\n');
+    var htmlContent = '';
+
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+
+        if (line.trim() === '') {
+            htmlContent += '<p>&nbsp;</p>';
+            continue;
+        }
+
+        if (line.indexOf('# ') === 0) {
+            htmlContent += '<h1>' + escapeHtml(line.substring(2)) + '</h1>';
+            continue;
+        }
+
+        if (line.indexOf('## ') === 0) {
+            htmlContent += '<h2>' + escapeHtml(line.substring(3)) + '</h2>';
+            continue;
+        }
+
+        if (/^\s*[\*\-]\s+/.test(line)) {
+            htmlContent += '<li>' + escapeHtml(line.replace(/^\s*[\*\-]\s+/, '')) + '</li>';
+            continue;
+        }
+
+        htmlContent += '<p>' + escapeHtml(line) + '</p>';
+    }
+
+    // Wrap li tags in ul
+    htmlContent = htmlContent.replace(/(<li>.*?<\/li>)+/g, '<ul>$&</ul>');
+
+    var fullHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:"Times New Roman",serif;font-size:12pt;line-height:1.5;}h1{font-size:16pt;font-weight:bold;}h2{font-size:14pt;font-weight:bold;}p{margin:6pt 0;}ul{margin:6pt 0 6pt 20pt;}</style></head><body>' + htmlContent + '</body></html>';
+
+    var blob = new Blob([fullHtml], { type: 'application/msword' });
+    return blob;
+}
+
+function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ===== DOWNLOAD FILE (cả PC và Mobile) =====
+function downloadFile() {
     var text = contentArea.value.trim();
     if (!text) return;
 
-    // Cách copy hoạt động trên mọi mobile
-    var textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.top = '0';
-    textArea.style.left = '0';
-    textArea.style.width = '1px';
-    textArea.style.height = '1px';
-    textArea.style.opacity = '0';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
+    var blob = generateDocxBlob(text);
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'document.doc';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('✅ Đã tải file Word thành công!');
+}
 
-    try {
-        document.execCommand('copy');
-        showToast('Đã copy thành công! Dán vào Word nhé.');
-        copyBtn.querySelector('.btn-text').textContent = 'Đã copy ✓';
-        setTimeout(function() {
-            copyBtn.querySelector('.btn-text').textContent = 'Sao chép văn bản';
-        }, 2000);
-    } catch (err) {
-        showToast('Không copy được, hãy chọn thủ công.');
-    }
-
-    document.body.removeChild(textArea);
+// ===== NÚT COPY (Mobile) =====
+copyBtn.addEventListener('click', function() {
+    downloadFile();
 });
 
-// ===== DOWNLOAD (PC) - load thư viện khi cần =====
+// ===== NÚT DOWNLOAD (PC) =====
 downloadBtn.addEventListener('click', function() {
-    downloadBtn.disabled = true;
-    downloadBtn.querySelector('.btn-text').textContent = 'Đang tạo...';
-
-    // Load docx + FileSaver nếu chưa có
-    if (typeof docx === 'undefined') {
-        var s1 = document.createElement('script');
-        s1.src = 'https://unpkg.com/docx@8.2.0/build/index.umd.js';
-        s1.onload = function() {
-            var s2 = document.createElement('script');
-            s2.src = 'https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js';
-            s2.onload = function() { generateDocx(); };
-            s2.onerror = function() { handleDownloadError(); };
-            document.body.appendChild(s2);
-        };
-        s1.onerror = function() { handleDownloadError(); };
-        document.body.appendChild(s1);
-    } else {
-        generateDocx();
-    }
+    downloadFile();
 });
-
-function handleDownloadError() {
-    showToast('Lỗi tải thư viện, thử lại nhé.');
-    downloadBtn.querySelector('.btn-text').textContent = 'Tải file .docx';
-    downloadBtn.disabled = contentArea.value.trim().length === 0;
-}
-
-function generateDocx() {
-    try {
-        var text = contentArea.value;
-        var lines = text.split('\n');
-        var children = [];
-
-        for (var i = 0; i < lines.length; i++) {
-            var line = lines[i];
-
-            if (line.trim() === '') {
-                children.push(new docx.Paragraph({ children: [] }));
-                continue;
-            }
-
-            if (line.indexOf('# ') === 0) {
-                children.push(new docx.Paragraph({
-                    children: [new docx.TextRun({ text: line.substring(2), bold: true, size: 32, font: 'Times New Roman' })],
-                    heading: docx.HeadingLevel.HEADING_1,
-                    spacing: { before: 240, after: 120 }
-                }));
-                continue;
-            }
-
-            if (/^\s*[\*\-]\s+/.test(line)) {
-                children.push(new docx.Paragraph({
-                    children: [new docx.TextRun({ text: line.replace(/^\s*[\*\-]\s+/, ''), size: 24, font: 'Times New Roman' })],
-                    bullet: { level: 0 },
-                    spacing: { line: 360 }
-                }));
-                continue;
-            }
-
-            children.push(new docx.Paragraph({
-                children: [new docx.TextRun({ text: line, size: 24, font: 'Times New Roman' })],
-                spacing: { line: 360, before: 60, after: 60 }
-            }));
-        }
-
-        var doc = new docx.Document({
-            sections: [{ properties: {}, children: children }]
-        });
-
-        docx.Packer.toBlob(doc).then(function(blob) {
-            saveAs(blob, 'document.docx');
-            showToast('Đã tải file thành công!');
-            resetDownloadBtn();
-        });
-    } catch (err) {
-        console.error(err);
-        showToast('Có lỗi, thử lại nhé.');
-        resetDownloadBtn();
-    }
-}
-
-function resetDownloadBtn() {
-    downloadBtn.querySelector('.btn-text').textContent = 'Tải file .docx';
-    downloadBtn.disabled = contentArea.value.trim().length === 0;
-}
