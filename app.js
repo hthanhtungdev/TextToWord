@@ -7,9 +7,19 @@ const actionHint = document.getElementById('action-hint');
 const toast = document.getElementById('toast');
 const toastText = document.getElementById('toast-text');
 
-// ===== GEMINI API KEY =====
+// ===== GEMINI API =====
 const GEMINI_API_KEY = 'AIzaSyAAZdbQyosFx3T6hbCVltw43D0NdKFA2ss';
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent';
+
+// Thử lần lượt các model, nếu bị rate limit thì chuyển sang model khác
+const GEMINI_MODELS = [
+    'gemini-2.0-flash-lite',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash'
+];
+
+function getGeminiUrl(model) {
+    return 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + GEMINI_API_KEY;
+}
 
 // Enable/disable buttons
 contentArea.addEventListener('input', function() {
@@ -29,6 +39,40 @@ function showToast(message) {
     }, 3000);
 }
 
+// ===== GỌI GEMINI API VỚI RETRY =====
+async function callGemini(prompt) {
+    for (var i = 0; i < GEMINI_MODELS.length; i++) {
+        var url = getGeminiUrl(GEMINI_MODELS[i]);
+        try {
+            var response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }]
+                })
+            });
+
+            // Nếu bị rate limit, thử model tiếp theo
+            if (response.status === 429) {
+                console.log('Model ' + GEMINI_MODELS[i] + ' bị rate limit, thử model khác...');
+                // Đợi 1 giây trước khi thử model tiếp
+                await new Promise(function(r) { setTimeout(r, 1000); });
+                continue;
+            }
+
+            var data = await response.json();
+
+            if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                return data.candidates[0].content.parts[0].text;
+            }
+        } catch (err) {
+            console.error('Lỗi model ' + GEMINI_MODELS[i] + ':', err);
+            continue;
+        }
+    }
+    return null;
+}
+
 // ===== AI SẮP XẾP VĂN BẢN =====
 formatBtn.addEventListener('click', async function() {
     var text = contentArea.value.trim();
@@ -38,42 +82,25 @@ formatBtn.addEventListener('click', async function() {
     formatBtn.querySelector('.btn-text').textContent = '⏳ Đang sắp xếp...';
     formatBtn.disabled = true;
 
-    try {
-        var prompt = 'Bạn là trợ lý định dạng văn bản. Hãy sắp xếp lại đoạn văn bản sau thành dạng có cấu trúc rõ ràng để xuất ra file Word đẹp. Quy tắc:\n' +
-            '- Nhận diện tiêu đề chính, đặt trên 1 dòng riêng với # ở đầu\n' +
-            '- Nhận diện tiêu đề phụ, đặt trên 1 dòng riêng với ## ở đầu\n' +
-            '- Nhận diện các mục liệt kê, đặt mỗi mục 1 dòng với * ở đầu\n' +
-            '- Các đoạn văn bản thường thì tách riêng bằng dòng trống\n' +
-            '- Giữ nguyên nội dung, KHÔNG thêm bớt ý, KHÔNG dịch, KHÔNG giải thích\n' +
-            '- Chỉ trả về văn bản đã sắp xếp, không thêm gì khác\n\n' +
-            'Văn bản cần sắp xếp:\n' + text;
+    var prompt = 'Bạn là trợ lý định dạng văn bản. Hãy sắp xếp lại đoạn văn bản sau thành dạng có cấu trúc rõ ràng để xuất ra file Word đẹp. Quy tắc:\n' +
+        '- Nhận diện tiêu đề chính, đặt trên 1 dòng riêng với # ở đầu\n' +
+        '- Nhận diện tiêu đề phụ, đặt trên 1 dòng riêng với ## ở đầu\n' +
+        '- Nhận diện các mục liệt kê, đặt mỗi mục 1 dòng với * ở đầu\n' +
+        '- Các đoạn văn bản thường thì tách riêng bằng dòng trống\n' +
+        '- Giữ nguyên nội dung, KHÔNG thêm bớt ý, KHÔNG dịch, KHÔNG giải thích\n' +
+        '- Chỉ trả về văn bản đã sắp xếp, không thêm gì khác\n\n' +
+        'Văn bản cần sắp xếp:\n' + text;
 
-        var response = await fetch(GEMINI_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': GEMINI_API_KEY
-            },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-            })
-        });
+    var result = await callGemini(prompt);
 
-        var data = await response.json();
-
-        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-            var result = data.candidates[0].content.parts[0].text;
-            // Loại bỏ markdown code block nếu AI wrap lại
-            result = result.replace(/^```[\s\S]*?\n/, '').replace(/\n```$/, '').trim();
-            contentArea.value = result;
-            contentArea.dispatchEvent(new Event('input'));
-            showToast('✅ Đã sắp xếp xong!');
-        } else {
-            showToast('❌ AI không phản hồi, thử lại nhé.');
-        }
-    } catch (err) {
-        console.error(err);
-        showToast('❌ Lỗi kết nối AI, kiểm tra mạng nhé.');
+    if (result) {
+        // Loại bỏ markdown code block nếu AI wrap lại
+        result = result.replace(/^```[a-z]*\n?/gm, '').replace(/```$/gm, '').trim();
+        contentArea.value = result;
+        contentArea.dispatchEvent(new Event('input'));
+        showToast('✅ Đã sắp xếp xong!');
+    } else {
+        showToast('❌ AI đang bận, vui lòng đợi 1 phút rồi thử lại.');
     }
 
     formatBtn.classList.remove('loading');
@@ -152,9 +179,7 @@ async function copyAsDocFile() {
         var file = new File([fileBlob], getFileName() + '.doc', { type: 'application/msword' });
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-                files: [file]
-            });
+            await navigator.share({ files: [file] });
             showToast('✅ Đã chia sẻ file Word!');
         } else {
             downloadDocFile();
