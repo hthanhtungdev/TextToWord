@@ -117,26 +117,27 @@ formatBtn.addEventListener('click', async function() {
     formatBtn.querySelector('.btn-text').textContent = 'Đang sắp xếp...';
     formatBtn.disabled = true;
 
-    var prompt = 'Bạn là trợ lý định dạng văn bản chuyên nghiệp. Hãy sắp xếp lại đoạn văn bản sau thành dạng có cấu trúc đẹp, rõ ràng để xuất ra file Word chuyên nghiệp. Quy tắc:\n' +
-        '- Nhận diện tiêu đề chính, đặt trên 1 dòng riêng với # ở đầu\n' +
-        '- Nhận diện tiêu đề phụ/mục, đặt trên 1 dòng riêng với ## ở đầu\n' +
-        '- Nhận diện các mục liệt kê, đặt mỗi mục 1 dòng với * ở đầu\n' +
-        '- Nếu có dữ liệu dạng so sánh hoặc nhiều cột thông tin, hãy tạo bảng dùng cú pháp:\n' +
-        '  [TABLE]\n' +
-        '  Cột 1 | Cột 2 | Cột 3\n' +
-        '  Dữ liệu 1 | Dữ liệu 2 | Dữ liệu 3\n' +
-        '  [/TABLE]\n' +
-        '- Đánh số thứ tự các phần lớn (1. 2. 3.)\n' +
-        '- Các đoạn văn bản thường thì tách riêng bằng dòng trống\n' +
-        '- Giữ nguyên nội dung, KHÔNG thêm bớt ý, KHÔNG dịch, KHÔNG giải thích thêm\n' +
-        '- Chỉ trả về văn bản đã sắp xếp, không thêm gì khác\n\n' +
-        'Văn bản cần sắp xếp:\n' + text;
+    var prompt = 'Sắp xếp lại văn bản sau. Quy tắc:\n' +
+        '- # cho tiêu đề chính\n' +
+        '- ## cho tiêu đề phụ\n' +
+        '- * cho liệt kê (KHÔNG dùng -)\n' +
+        '- Tách đoạn bằng dòng trống\n' +
+        '- KHÔNG dùng **bold**\n' +
+        '- GIỮ NGUYÊN TOÀN BỘ nội dung, trả về ĐẦY ĐỦ không được bỏ sót\n' +
+        '- Chỉ trả văn bản đã sắp xếp\n\n' + text;
 
     var result = await callAI(prompt);
 
     if (result) {
         result = result.replace(/^```[a-z]*\n?/gm, '').replace(/```$/gm, '').trim();
-        contentArea.value = result;
+        // Nếu AI trả về quá ngắn so với input (bị cắt), giữ nguyên input
+        if (result.length < text.length * 0.4) {
+            showToast('⚠️ AI trả về thiếu, giữ nguyên văn bản.');
+        } else {
+            contentArea.value = result;
+            contentArea.dispatchEvent(new Event('input'));
+            showToast('✅ Đã sắp xếp xong!');
+        }
         contentArea.dispatchEvent(new Event('input'));
         showToast('✅ Đã sắp xếp xong!');
     } else {
