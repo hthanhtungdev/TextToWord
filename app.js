@@ -77,29 +77,22 @@ formatBtn.addEventListener('click', async function() {
     formatBtn.querySelector('.btn-text').textContent = 'Đang tạo file Word...';
     formatBtn.disabled = true;
 
-    var prompt = 'Tạo tài liệu HTML chuyên nghiệp từ văn bản sau. Yêu cầu QUAN TRỌNG về định dạng:\n\n' +
-        '1. HTML hoàn chỉnh bắt đầu từ <html>, có <style> trong <head>\n' +
-        '2. Style CSS trong <head>:\n' +
-        '   - body: font-family Times New Roman, font-size 13pt, line-height 1.8, margin 2.5cm\n' +
-        '   - h1: font-size 22pt, font-weight bold, text-align center, margin-bottom 20px\n' +
-        '   - h2: font-size 16pt, font-weight bold, margin-top 24px, margin-bottom 12px\n' +
-        '   - h3: font-size 14pt, font-weight bold, margin-top 16px, margin-bottom 8px\n' +
-        '   - ul: margin-left 20px, list-style-type disc\n' +
-        '   - li: margin-bottom 6px\n' +
-        '   - table: border-collapse collapse, width 100%, margin 16px 0\n' +
-        '   - th: background #f0f0f0, border 1px solid #333, padding 10px, font-weight bold\n' +
-        '   - td: border 1px solid #333, padding 10px\n' +
-        '   - p: margin-bottom 10px\n' +
-        '3. Nội dung:\n' +
-        '   - Tiêu đề chính dùng <h1>\n' +
-        '   - Các phần lớn (I, II, III...) dùng <h2>\n' +
-        '   - Các mục con (1, 2, 3...) dùng <h3>\n' +
-        '   - Danh sách dùng <ul><li>, lồng nhau nếu có sub-items\n' +
-        '   - Dữ liệu số liệu phù hợp thì dùng <table>\n' +
-        '   - Các bullet item có label in đậm dùng <strong> cho phần label\n' +
-        '   - Thêm đoạn mở đầu ngắn cho mỗi phần nếu phù hợp\n' +
-        '4. GIỮ NGUYÊN toàn bộ nội dung gốc\n' +
-        '5. CHỈ trả về HTML, KHÔNG giải thích\n\n' +
+    var prompt = 'Tạo tài liệu HTML chuyên nghiệp từ văn bản sau, định dạng GIỐNG HỆT mẫu sau:\n\n' +
+        'MẪU ĐỊNH DẠNG CẦN TUÂN THEO:\n' +
+        '- Tiêu đề chính: <h1> cỡ 24pt, in đậm, KHÔNG căn giữa, font Arial\n' +
+        '- Phần lớn (I, II, III): <h2> cỡ 18pt, in đậm\n' +
+        '- Mục con (1, 2, 3): <h3> cỡ 14pt, in đậm\n' +
+        '- Có đoạn mở đầu giới thiệu ngắn cho mỗi phần\n' +
+        '- Bullet list dùng <ul><li> với label in đậm: <strong>Label:</strong> nội dung\n' +
+        '- Sub-list lồng nhau: <ul><li> bên trong <li> cha, dùng circle style\n' +
+        '- Số liệu so sánh dùng <table> có header nền xám, border, padding 10px\n' +
+        '- Font: Times New Roman 13pt, line-height 1.8\n' +
+        '- Body margin: 2.5cm\n\n' +
+        'YÊU CẦU:\n' +
+        '- Trả về HTML hoàn chỉnh từ <html> đến </html>\n' +
+        '- Có <style> trong <head> cho tất cả CSS\n' +
+        '- GIỮ NGUYÊN toàn bộ nội dung, không thêm không bớt\n' +
+        '- CHỈ trả HTML, không giải thích\n\n' +
         'Văn bản:\n' + text;
 
     var result = await callAI(prompt);
