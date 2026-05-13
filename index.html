@@ -25,7 +25,7 @@
                 <textarea id="doc-content" placeholder="Dán hoặc nhập nội dung văn bản vào đây..."></textarea>
             </div>
 
-            <!-- Bên phải: nút tải -->
+            <!-- Bên phải: nút hành động -->
             <div class="panel action-panel">
                 <div class="action-content">
                     <div class="icon-box">
@@ -36,19 +36,39 @@
                             <line x1="16" y1="17" x2="8" y2="17"></line>
                         </svg>
                     </div>
-                    <p class="action-desc">File Word sẽ được tạo từ nội dung bên trái</p>
+
+                    <!-- Nút tải file (PC) -->
                     <button id="download-btn" class="download-btn" disabled>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
                             <line x1="12" y1="15" x2="12" y2="3"></line>
                         </svg>
-                        Tải file .docx
+                        <span class="btn-text">Tải file .docx</span>
                     </button>
-                    <span class="hint">Ctrl + Enter để tải nhanh</span>
+
+                    <!-- Nút copy (Mobile) -->
+                    <button id="copy-btn" class="copy-btn" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <span class="btn-text">Sao chép văn bản</span>
+                    </button>
+
+                    <p class="action-desc" id="action-hint">Nhập nội dung để bắt đầu</p>
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Thông báo toast -->
+    <div id="toast" class="toast hidden">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        <span id="toast-text">Đã copy thành công!</span>
     </div>
 
     <script src="https://unpkg.com/docx@8.2.0/build/index.umd.js"></script>

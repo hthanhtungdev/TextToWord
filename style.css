@@ -7,6 +7,8 @@
 :root {
     --primary: #6366f1;
     --primary-hover: #4f46e5;
+    --green: #10b981;
+    --green-hover: #059669;
     --bg: #0f0f1a;
     --card: rgba(255, 255, 255, 0.04);
     --border: rgba(255, 255, 255, 0.08);
@@ -25,7 +27,7 @@ body {
     justify-content: center;
     padding: 20px;
     position: relative;
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
 .bg-gradient {
@@ -53,7 +55,7 @@ header h1 {
     text-align: center;
 }
 
-/* ===== MAIN LAYOUT: 2 cột ===== */
+/* ===== MAIN LAYOUT ===== */
 .main-layout {
     display: grid;
     grid-template-columns: 1fr 300px;
@@ -108,7 +110,7 @@ header h1 {
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 20px;
+    gap: 16px;
 }
 
 .icon-box {
@@ -124,19 +126,19 @@ header h1 {
 }
 
 .action-desc {
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
     line-height: 1.5;
-    max-width: 200px;
+    max-width: 220px;
 }
 
-/* ===== DOWNLOAD BUTTON ===== */
-.download-btn {
+/* ===== BUTTONS ===== */
+.download-btn,
+.copy-btn {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 14px 28px;
-    background: var(--primary);
     border: none;
     border-radius: 12px;
     color: white;
@@ -145,6 +147,12 @@ header h1 {
     font-family: inherit;
     cursor: pointer;
     transition: all 0.25s ease;
+    width: 100%;
+    justify-content: center;
+}
+
+.download-btn {
+    background: var(--primary);
     box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
 }
 
@@ -154,19 +162,65 @@ header h1 {
     box-shadow: 0 12px 32px rgba(99, 102, 241, 0.4);
 }
 
-.download-btn:active:not(:disabled) {
+.copy-btn {
+    background: var(--green);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+}
+
+.copy-btn:hover:not(:disabled) {
+    background: var(--green-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(16, 185, 129, 0.4);
+}
+
+.download-btn:active:not(:disabled),
+.copy-btn:active:not(:disabled) {
     transform: translateY(0);
 }
 
-.download-btn:disabled {
+.download-btn:disabled,
+.copy-btn:disabled {
     opacity: 0.35;
     cursor: not-allowed;
     box-shadow: none;
 }
 
-.hint {
-    font-size: 0.72rem;
-    color: rgba(148, 163, 184, 0.5);
+/* PC: hiện download, ẩn copy */
+.copy-btn {
+    display: none;
+}
+
+/* ===== TOAST ===== */
+.toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #1e293b;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: var(--green);
+    padding: 14px 24px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.toast.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-50%) translateY(20px);
 }
 
 /* ===== RESPONSIVE TABLET ===== */
@@ -177,11 +231,11 @@ header h1 {
     }
 
     .input-panel {
-        min-height: 300px;
+        min-height: 280px;
     }
 
     .action-panel {
-        padding: 32px 20px;
+        padding: 28px 20px;
     }
 
     .icon-box {
@@ -194,6 +248,15 @@ header h1 {
         width: 36px;
         height: 36px;
     }
+
+    /* Mobile: hiện copy, ẩn download */
+    .download-btn {
+        display: none;
+    }
+
+    .copy-btn {
+        display: flex;
+    }
 }
 
 /* ===== RESPONSIVE MOBILE ===== */
@@ -201,7 +264,7 @@ header h1 {
     body {
         padding: 16px;
         align-items: flex-start;
-        padding-top: 40px;
+        padding-top: 32px;
     }
 
     header h1 {
@@ -214,19 +277,33 @@ header h1 {
     }
 
     .input-panel {
-        min-height: 250px;
+        min-height: 240px;
     }
 
-    .download-btn {
-        padding: 12px 24px;
+    .copy-btn {
+        padding: 14px 20px;
         font-size: 0.9rem;
-        width: 100%;
-        justify-content: center;
     }
 
     .action-content {
-        gap: 16px;
+        gap: 14px;
         width: 100%;
+    }
+
+    .toast {
+        bottom: 20px;
+        left: 16px;
+        right: 16px;
+        transform: translateX(0) translateY(20px);
+        font-size: 0.85rem;
+    }
+
+    .toast.show {
+        transform: translateX(0) translateY(0);
+    }
+
+    .toast.hidden {
+        transform: translateX(0) translateY(20px);
     }
 }
 
