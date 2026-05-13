@@ -6,136 +6,138 @@ const toast = document.getElementById('toast');
 const toastText = document.getElementById('toast-text');
 
 // Enable/disable buttons
-contentArea.addEventListener('input', () => {
-    const hasContent = contentArea.value.trim().length > 0;
+contentArea.addEventListener('input', function() {
+    var hasContent = contentArea.value.trim().length > 0;
     downloadBtn.disabled = !hasContent;
     copyBtn.disabled = !hasContent;
-    actionHint.textContent = hasContent ? 'Sẵn sàng xuất file' : 'Nhập nội dung để bắt đầu';
+    actionHint.textContent = hasContent ? 'Sẵn sàng xuất' : 'Nhập nội dung để bắt đầu';
 });
 
-// Show toast notification
+// Show toast
 function showToast(message) {
     toastText.textContent = message;
-    toast.classList.remove('hidden');
-    toast.classList.add('show');
-    setTimeout(() => {
-        toast.classList.remove('show');
-        toast.classList.add('hidden');
+    toast.className = 'toast show';
+    setTimeout(function() {
+        toast.className = 'toast hidden';
     }, 2500);
 }
 
-// ===== COPY TO CLIPBOARD (Mobile) =====
-copyBtn.addEventListener('click', async () => {
-    const text = contentArea.value.trim();
+// ===== COPY (Mobile) =====
+copyBtn.addEventListener('click', function() {
+    var text = contentArea.value.trim();
     if (!text) return;
 
+    // Cách copy hoạt động trên mọi mobile
+    var textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.top = '0';
+    textArea.style.left = '0';
+    textArea.style.width = '1px';
+    textArea.style.height = '1px';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
     try {
-        await navigator.clipboard.writeText(text);
-        showToast('✅ Đã copy thành công! Dán vào Word được rồi.');
-        
-        // Đổi nút thành trạng thái thành công
-        copyBtn.innerHTML = `
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
-            <span class="btn-text">Đã copy ✓</span>`;
-        
-        // Reset sau 2 giây
-        setTimeout(() => {
-            copyBtn.innerHTML = `
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-                <span class="btn-text">Sao chép văn bản</span>`;
+        document.execCommand('copy');
+        showToast('Đã copy thành công! Dán vào Word nhé.');
+        copyBtn.querySelector('.btn-text').textContent = 'Đã copy ✓';
+        setTimeout(function() {
+            copyBtn.querySelector('.btn-text').textContent = 'Sao chép văn bản';
         }, 2000);
     } catch (err) {
-        // Fallback cho trình duyệt cũ
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.opacity = '0';
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        showToast('✅ Đã copy thành công! Dán vào Word được rồi.');
+        showToast('Không copy được, hãy chọn thủ công.');
+    }
+
+    document.body.removeChild(textArea);
+});
+
+// ===== DOWNLOAD (PC) - load thư viện khi cần =====
+downloadBtn.addEventListener('click', function() {
+    downloadBtn.disabled = true;
+    downloadBtn.querySelector('.btn-text').textContent = 'Đang tạo...';
+
+    // Load docx + FileSaver nếu chưa có
+    if (typeof docx === 'undefined') {
+        var s1 = document.createElement('script');
+        s1.src = 'https://unpkg.com/docx@8.2.0/build/index.umd.js';
+        s1.onload = function() {
+            var s2 = document.createElement('script');
+            s2.src = 'https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js';
+            s2.onload = function() { generateDocx(); };
+            s2.onerror = function() { handleDownloadError(); };
+            document.body.appendChild(s2);
+        };
+        s1.onerror = function() { handleDownloadError(); };
+        document.body.appendChild(s1);
+    } else {
+        generateDocx();
     }
 });
 
-// ===== DOWNLOAD DOCX (PC) =====
-async function createWordDocument() {
-    const text = contentArea.value;
-    const lines = text.split('\n');
-    const children = [];
-
-    for (const line of lines) {
-        if (line.trim() === '') {
-            children.push(new docx.Paragraph({ children: [] }));
-            continue;
-        }
-
-        if (line.startsWith('# ')) {
-            children.push(new docx.Paragraph({
-                children: [new docx.TextRun({ text: line.substring(2), bold: true, size: 32, font: 'Times New Roman' })],
-                heading: docx.HeadingLevel.HEADING_1,
-                spacing: { before: 240, after: 120 }
-            }));
-            continue;
-        }
-
-        if (/^\s*[\*\-]\s+/.test(line)) {
-            children.push(new docx.Paragraph({
-                children: [new docx.TextRun({ text: line.replace(/^\s*[\*\-]\s+/, ''), size: 24, font: 'Times New Roman' })],
-                bullet: { level: 0 },
-                spacing: { line: 360 }
-            }));
-            continue;
-        }
-
-        children.push(new docx.Paragraph({
-            children: [new docx.TextRun({ text: line, size: 24, font: 'Times New Roman' })],
-            spacing: { line: 360, before: 60, after: 60 }
-        }));
-    }
-
-    const doc = new docx.Document({
-        sections: [{ properties: {}, children: children }]
-    });
-
-    const blob = await docx.Packer.toBlob(doc);
-    saveAs(blob, 'document.docx');
-    showToast('✅ Đã tải file thành công!');
+function handleDownloadError() {
+    showToast('Lỗi tải thư viện, thử lại nhé.');
+    downloadBtn.querySelector('.btn-text').textContent = 'Tải file .docx';
+    downloadBtn.disabled = contentArea.value.trim().length === 0;
 }
 
-downloadBtn.addEventListener('click', async () => {
+function generateDocx() {
     try {
-        downloadBtn.disabled = true;
-        downloadBtn.querySelector('.btn-text').textContent = 'Đang tạo...';
-        await createWordDocument();
-    } catch (err) {
-        console.error('Lỗi:', err);
-        showToast('❌ Có lỗi xảy ra, thử lại nhé.');
-    } finally {
-        downloadBtn.innerHTML = `
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            <span class="btn-text">Tải file .docx</span>`;
-        downloadBtn.disabled = contentArea.value.trim().length === 0;
-    }
-});
+        var text = contentArea.value;
+        var lines = text.split('\n');
+        var children = [];
 
-// Ctrl+Enter shortcut
-document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        if (!downloadBtn.disabled && window.innerWidth > 768) {
-            downloadBtn.click();
-        } else if (!copyBtn.disabled) {
-            copyBtn.click();
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+
+            if (line.trim() === '') {
+                children.push(new docx.Paragraph({ children: [] }));
+                continue;
+            }
+
+            if (line.indexOf('# ') === 0) {
+                children.push(new docx.Paragraph({
+                    children: [new docx.TextRun({ text: line.substring(2), bold: true, size: 32, font: 'Times New Roman' })],
+                    heading: docx.HeadingLevel.HEADING_1,
+                    spacing: { before: 240, after: 120 }
+                }));
+                continue;
+            }
+
+            if (/^\s*[\*\-]\s+/.test(line)) {
+                children.push(new docx.Paragraph({
+                    children: [new docx.TextRun({ text: line.replace(/^\s*[\*\-]\s+/, ''), size: 24, font: 'Times New Roman' })],
+                    bullet: { level: 0 },
+                    spacing: { line: 360 }
+                }));
+                continue;
+            }
+
+            children.push(new docx.Paragraph({
+                children: [new docx.TextRun({ text: line, size: 24, font: 'Times New Roman' })],
+                spacing: { line: 360, before: 60, after: 60 }
+            }));
         }
+
+        var doc = new docx.Document({
+            sections: [{ properties: {}, children: children }]
+        });
+
+        docx.Packer.toBlob(doc).then(function(blob) {
+            saveAs(blob, 'document.docx');
+            showToast('Đã tải file thành công!');
+            resetDownloadBtn();
+        });
+    } catch (err) {
+        console.error(err);
+        showToast('Có lỗi, thử lại nhé.');
+        resetDownloadBtn();
     }
-});
+}
+
+function resetDownloadBtn() {
+    downloadBtn.querySelector('.btn-text').textContent = 'Tải file .docx';
+    downloadBtn.disabled = contentArea.value.trim().length === 0;
+}
