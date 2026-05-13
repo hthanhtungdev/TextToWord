@@ -53,15 +53,28 @@ async function callAI(prompt) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                messages: [{ role: 'user', content: prompt }],
+                messages: [
+                    { role: 'system', content: 'You are a text formatting assistant. Only return the formatted text, nothing else. No explanations, no reasoning, no JSON. Just the formatted Vietnamese text.' },
+                    { role: 'user', content: prompt }
+                ],
                 model: 'openai',
-                seed: 42
+                seed: 42,
+                jsonMode: false
             })
         });
 
         if (response.ok) {
             var text = await response.text();
-            if (text && text.length > 10) {
+            // Loại bỏ JSON wrapper nếu có
+            if (text.startsWith('{')) {
+                try {
+                    var json = JSON.parse(text);
+                    if (json.content) text = json.content;
+                    else if (json.text) text = json.text;
+                    else if (json.choices && json.choices[0]) text = json.choices[0].message.content;
+                } catch(e) {}
+            }
+            if (text && text.length > 10 && !text.startsWith('{"role"')) {
                 return text;
             }
         }
