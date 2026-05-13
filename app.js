@@ -8,9 +8,8 @@ const toast = document.getElementById('toast');
 const toastText = document.getElementById('toast-text');
 
 // ===== GEMINI API KEY =====
-// Dùng Gemini free tier
-const GEMINI_API_KEY = 'AIzaSyA8MKKhJEHSBMZHaFnJC7gEMSxWBfJOqMk';
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_API_KEY;
+const GEMINI_API_KEY = 'AIzaSyAAZdbQyosFx3T6hbCVltw43D0NdKFA2ss';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 // Enable/disable buttons
 contentArea.addEventListener('input', function() {
@@ -51,7 +50,10 @@ formatBtn.addEventListener('click', async function() {
 
         var response = await fetch(GEMINI_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': GEMINI_API_KEY
+            },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }]
             })
