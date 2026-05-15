@@ -368,7 +368,6 @@ header { padding: 4px 0; }
 .copy-btn:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
 
 .copy-btn { display: none; }
-.preview-btn { display: none; }
 
 /* ===== FOOTER ===== */
 footer {
@@ -517,11 +516,6 @@ footer {
     .icon-box { width: 64px; height: 64px; border-radius: 18px; font-size: 1.8rem; }
     .download-btn { display: none; }
     .copy-btn { display: flex; }
-    .preview-btn {
-        display: flex;
-        background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-        box-shadow: 0 4px 14px rgba(108, 92, 231, 0.25);
-    }
     .blob-1 { width: 250px; height: 250px; }
     .blob-2 { width: 200px; height: 200px; }
     .blob-3 { display: none; }

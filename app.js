@@ -188,42 +188,6 @@ function buildSimpleHtml(text) {
 }
 
 // ===== EVENTS =====
-var previewBtn = document.getElementById('preview-btn');
-
-contentArea.addEventListener('input', function() {
-    var hasContent = contentArea.value.trim().length > 0;
-    downloadBtn.disabled = !hasContent;
-    copyBtn.disabled = !hasContent;
-    if (previewBtn) previewBtn.disabled = !hasContent;
-    actionHint.textContent = hasContent ? 'Sẵn sàng xuất' : 'Nhập nội dung để bắt đầu';
-});
-
-// Xem trước: mở HTML trong tab mới
-if (previewBtn) {
-    previewBtn.addEventListener('click', async function() {
-        var text = contentArea.value.trim();
-        if (!text) return;
-
-        previewBtn.querySelector('.btn-text').textContent = 'Đang tạo...';
-        previewBtn.disabled = true;
-
-        var htmlContent = await callAI(text);
-        if (!htmlContent || htmlContent.indexOf('<') === -1) {
-            htmlContent = buildSimpleHtml(text);
-        }
-        if (htmlContent.indexOf('<html') === -1) {
-            htmlContent = '<html><head><meta charset="utf-8"></head><body style="font-family:Times New Roman,serif;font-size:13pt;line-height:1.8;margin:20px;">' + htmlContent + '</body></html>';
-        }
-
-        var previewBlob = new Blob([htmlContent], { type: 'text/html; charset=utf-8' });
-        var previewUrl = URL.createObjectURL(previewBlob);
-        window.open(previewUrl, '_blank');
-
-        previewBtn.querySelector('.btn-text').textContent = 'Xem trước';
-        previewBtn.disabled = contentArea.value.trim().length === 0;
-    });
-}
-
 downloadBtn.addEventListener('click', function() { createAndExport('download'); });
 copyBtn.addEventListener('click', function() { createAndExport('share'); });
 
