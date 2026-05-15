@@ -529,8 +529,8 @@ footer {
     .logo h1 { font-size: 1.25rem; }
     .tagline { font-size: 0.75rem; }
     .panel { padding: 18px; border-radius: 16px; }
-    .field textarea { min-height: 180px; padding: 14px; font-size: 0.84rem; }
-    .field input, .field select { padding: 11px 14px; font-size: 0.84rem; }
+    .field textarea { min-height: 180px; padding: 14px; font-size: 16px; }
+    .field input, .field select { padding: 11px 14px; font-size: 16px; }
     .format-btn { padding: 12px 14px; font-size: 0.84rem; }
     .copy-btn { padding: 13px 20px; font-size: 0.86rem; }
     .features { gap: 14px; }
