@@ -112,9 +112,14 @@ async function createAndExport(mode) {
     var fileExt;
 
     if (window.innerWidth <= 768) {
-        // Mobile: dùng .doc (HTML) vì iOS/Android mở được luôn
+        // Mobile: tạo .doc nhưng cũng mở preview trong tab mới
         blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
         fileExt = '.doc';
+        
+        // Mở preview HTML trong tab mới để xem luôn
+        var previewBlob = new Blob([htmlContent], { type: 'text/html; charset=utf-8' });
+        var previewUrl = URL.createObjectURL(previewBlob);
+        window.open(previewUrl, '_blank');
     } else {
         // PC: dùng .docx
         blob = htmlDocx.asBlob(htmlContent);
