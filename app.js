@@ -112,9 +112,8 @@ async function createAndExport(mode) {
     var fileExt;
 
     if (window.innerWidth <= 768) {
-        // Mobile: dùng MHTML format (.doc) - iOS và Zalo preview được
-        var mhtmlContent = 'MIME-Version: 1.0\r\nContent-Type: multipart/related; boundary="----=_NextPart"\r\n\r\n------=_NextPart\r\nContent-Type: text/html; charset="utf-8"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n' + htmlContent + '\r\n------=_NextPart--';
-        blob = new Blob([mhtmlContent], { type: 'application/msword' });
+        // Mobile: tạo .doc + hiện preview trên web
+        blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
         fileExt = '.doc';
     } else {
         // PC: dùng .docx
@@ -189,6 +188,42 @@ function buildSimpleHtml(text) {
 }
 
 // ===== EVENTS =====
+var previewBtn = document.getElementById('preview-btn');
+
+contentArea.addEventListener('input', function() {
+    var hasContent = contentArea.value.trim().length > 0;
+    downloadBtn.disabled = !hasContent;
+    copyBtn.disabled = !hasContent;
+    if (previewBtn) previewBtn.disabled = !hasContent;
+    actionHint.textContent = hasContent ? 'Sẵn sàng xuất' : 'Nhập nội dung để bắt đầu';
+});
+
+// Xem trước: mở HTML trong tab mới
+if (previewBtn) {
+    previewBtn.addEventListener('click', async function() {
+        var text = contentArea.value.trim();
+        if (!text) return;
+
+        previewBtn.querySelector('.btn-text').textContent = 'Đang tạo...';
+        previewBtn.disabled = true;
+
+        var htmlContent = await callAI(text);
+        if (!htmlContent || htmlContent.indexOf('<') === -1) {
+            htmlContent = buildSimpleHtml(text);
+        }
+        if (htmlContent.indexOf('<html') === -1) {
+            htmlContent = '<html><head><meta charset="utf-8"></head><body style="font-family:Times New Roman,serif;font-size:13pt;line-height:1.8;margin:20px;">' + htmlContent + '</body></html>';
+        }
+
+        var previewBlob = new Blob([htmlContent], { type: 'text/html; charset=utf-8' });
+        var previewUrl = URL.createObjectURL(previewBlob);
+        window.open(previewUrl, '_blank');
+
+        previewBtn.querySelector('.btn-text').textContent = 'Xem trước';
+        previewBtn.disabled = contentArea.value.trim().length === 0;
+    });
+}
+
 downloadBtn.addEventListener('click', function() { createAndExport('download'); });
 copyBtn.addEventListener('click', function() { createAndExport('share'); });
 
