@@ -112,9 +112,10 @@ async function createAndExport(mode) {
     var fileExt;
 
     if (window.innerWidth <= 768) {
-        // Mobile: dùng .docx (Zalo/iOS preview được .docx tốt hơn .doc)
-        blob = htmlDocx.asBlob(htmlContent);
-        fileExt = '.docx';
+        // Mobile: dùng MHTML format (.doc) - iOS và Zalo preview được
+        var mhtmlContent = 'MIME-Version: 1.0\r\nContent-Type: multipart/related; boundary="----=_NextPart"\r\n\r\n------=_NextPart\r\nContent-Type: text/html; charset="utf-8"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n' + htmlContent + '\r\n------=_NextPart--';
+        blob = new Blob([mhtmlContent], { type: 'application/msword' });
+        fileExt = '.doc';
     } else {
         // PC: dùng .docx
         blob = htmlDocx.asBlob(htmlContent);
