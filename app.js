@@ -106,24 +106,35 @@ async function createAndExport(mode) {
         htmlContent = '<html><head><meta charset="utf-8"></head><body style="font-family:Times New Roman,serif;font-size:13pt;line-height:1.8;margin:2.5cm;">' + htmlContent + '</body></html>';
     }
 
-    // Tạo blob DOCX
-    var converted = htmlDocx.asBlob(htmlContent);
+    // Tạo blob - dùng .doc cho mobile (tương thích tốt hơn), .docx cho PC
     var fileName = getFileName();
+    var blob;
+    var fileExt;
+
+    if (window.innerWidth <= 768) {
+        // Mobile: dùng .doc (HTML) vì iOS/Android mở được luôn
+        blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
+        fileExt = '.doc';
+    } else {
+        // PC: dùng .docx
+        blob = htmlDocx.asBlob(htmlContent);
+        fileExt = '.docx';
+    }
 
     if (mode === 'share') {
         try {
-            var file = new File([converted], fileName + '.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            var file = new File([blob], fileName + fileExt, { type: blob.type });
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({ files: [file] });
                 showToast('✅ Đã chia sẻ file Word!');
             } else {
-                downloadBlob(converted, fileName);
+                downloadBlobFile(blob, fileName + fileExt);
             }
         } catch(e) {
-            if (e.name !== 'AbortError') downloadBlob(converted, fileName);
+            if (e.name !== 'AbortError') downloadBlobFile(blob, fileName + fileExt);
         }
     } else {
-        downloadBlob(converted, fileName);
+        downloadBlobFile(blob, fileName + fileExt);
     }
 
     // Reset nút
@@ -138,16 +149,20 @@ function getFileName() {
     return name.replace(/[\\/:*?"<>|]/g, '');
 }
 
-function downloadBlob(blob, fileName) {
+function downloadBlobFile(blob, fullName) {
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = fileName + '.docx';
+    a.download = fullName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     setTimeout(function() { URL.revokeObjectURL(url); }, 100);
     showToast('✅ Đã tải file Word!');
+}
+
+function downloadBlob(blob, fileName) {
+    downloadBlobFile(blob, fileName + '.docx');
 }
 
 function escapeHtml(text) {
